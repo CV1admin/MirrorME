@@ -11,11 +11,31 @@ export enum GateStatus {
   NOGO = 'NO-GO'
 }
 
+export type MessageStatus = 'pending' | 'streaming' | 'sent' | 'failed' | 'ack';
+
+export interface AuditMetadata {
+  module_id: string;
+  assumptions: string[];
+  constraints_checked: string[];
+  violations: string[];
+  confidence: number;
+  refs: string[];
+  telemetry_snapshot?: {
+    gamma_hz: number;
+    vireax_v: number;
+    drift_seconds: number;
+    error_epsilon: number;
+  };
+}
+
 export interface Message {
   id: string;
+  client_msg_id?: string;
   role: Role;
   content: string;
   timestamp: Date;
+  status: MessageStatus;
+  audit?: AuditMetadata;
 }
 
 export interface LogicalRepair {
@@ -45,12 +65,12 @@ export interface ContradictionEvent {
 
 export interface MetricFrame {
   timestamp: number;
-  gamma: number;      // Sync proxy (Hz simulated)
-  psi: number;        // Snapshot integrity
-  vireax: number;     // Control-plane stability
-  error: number;      // Reasoning error proxy
-  drift: number;      // Temporal jitter (ms)
-  entropy: number;    // Hypothesis diversity
+  gamma: number;      // Sync proxy (Hz)
+  psi: number;        // Integrity (0..1)
+  vireax: number;     // Stability (0..1)
+  error: number;      // Reasoning Error (0..1)
+  drift: number;      // Temporal jitter (seconds, canonical)
+  entropy: number;    // Diversity (0..1)
 }
 
 export interface SimulationState {

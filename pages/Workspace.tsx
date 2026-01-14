@@ -42,7 +42,7 @@ const Workspace: React.FC<{ simState: SimulationState }> = ({ simState }) => {
           <AuditReport simState={simState} />
         </div>
         <div className="flex-1 overflow-hidden">
-          <ChatInterface />
+          <ChatInterface simState={simState} />
         </div>
       </div>
     </div>

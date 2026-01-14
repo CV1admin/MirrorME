@@ -18,7 +18,6 @@ const INITIAL_NODES: BrainNode[] = Array.from({ length: 40 }).map((_, i) => ({
   type: i % 3 === 0 ? 'cognitive' : i % 3 === 1 ? 'sensory' : 'motor',
 }));
 
-// Exact artifact from engineering protocol
 const MOCK_CONTRADICTION: ContradictionEvent = {
   id: 'trap-resolution-swan-001',
   event: "contradiction_trap_resolution",
@@ -36,40 +35,15 @@ const MOCK_CONTRADICTION: ContradictionEvent = {
     "explanation": "B provides a counterexample to A."
   },
   repairs_minimal: [
-    {
-      "type": "revise_axiom",
-      "change": "A -> 'Most swans are white' or 'All observed swans are white'",
-      "cost": "low",
-      "notes": "Preserves classical logic."
-    },
-    {
-      "type": "defeasible_default",
-      "change": "A becomes a default rule with exceptions",
-      "cost": "medium",
-      "notes": "Requires non-monotonic reasoning."
-    },
-    {
-      "type": "paraconsistent_logic",
-      "change": "Keep A and B; prevent explosion",
-      "cost": "medium-high",
-      "notes": "Logic layer must support paraconsistency."
-    }
+    { type: "revise_axiom", change: "A -> 'Most swans are white'", cost: "low", notes: "Preserves classical logic." },
+    { type: "defeasible_default", change: "A becomes a default rule", cost: "medium", notes: "Non-monotonic logic." },
+    { type: "paraconsistent_logic", change: "Keep A and B; prevent explosion", cost: "medium-high", notes: "Logic layer upgrade." }
   ],
-  assumptions: [
-    "Classical first-order logic unless otherwise specified"
-  ],
-  constraints_checked: [
-    "Non-contradiction (classical)",
-    "Minimal-change repair candidates"
-  ],
-  violations: [
-    "Non-contradiction violated if both A and B asserted as axioms in classical logic"
-  ],
+  assumptions: ["Classical FOL"],
+  constraints_checked: ["Non-contradiction", "Minimal-change repairs"],
+  violations: ["Non-contradiction violated"],
   confidence: 1.0,
-  refs: [
-    "MKone_LogicGate_Audit/ContradictionTrap",
-    "Classical_FOL_Consistency_Check"
-  ]
+  refs: ["MKone_LogicGate_Audit/ContradictionTrap"]
 };
 
 const App: React.FC = () => {
@@ -92,8 +66,11 @@ const App: React.FC = () => {
       const gamma = 40 + 5 * Math.sin(t * 0.05) + (Math.random() * 2);
       const psi = Math.max(0.99, 1 - (0.01 * Math.random()));
       const vireax = 0.994 + 0.005 * Math.sin(t * 0.02);
-      const drift = 0.002 + 0.001 * Math.random();
-      const error = (drift * 10) + (Math.random() * 0.02);
+      
+      // Drift in seconds (canonical). 0.00001s = 10us
+      const drift = 0.000005 + (Math.random() * 0.000005);
+      
+      const error = (drift * 500) + (Math.random() * 0.02);
       const entropy = 0.4 + 0.1 * Math.cos(t * 0.03);
 
       const newFrame: MetricFrame = {
@@ -106,7 +83,6 @@ const App: React.FC = () => {
         entropy,
       };
 
-      // Periodic trigger for logic audit (Simulating "Cognitive Friction")
       let activeContradiction = prev.activeContradiction;
       if (t > 0 && t % 300 === 0 && !activeContradiction) {
         activeContradiction = { ...MOCK_CONTRADICTION, timestamp: t };
@@ -114,11 +90,11 @@ const App: React.FC = () => {
         activeContradiction = undefined; 
       }
 
+      const isHealthy = vireax >= 0.99 && drift <= 0.00001 && error <= 0.05;
+
       let nextGate = prev.gateStatus;
       let nextGoFrames = prev.consecutiveGoFrames;
       let nextNoGoFrames = prev.consecutiveNoGoFrames;
-
-      const isHealthy = vireax >= 0.99 && drift <= 0.01 && error <= 0.05;
 
       if (isHealthy) {
         nextGoFrames++;
@@ -131,19 +107,14 @@ const App: React.FC = () => {
         else if (nextGate === GateStatus.GO) nextGate = GateStatus.STABILIZING;
       }
 
-      const updatedNodes = prev.nodes.map(node => ({
-        ...node,
-        activity: Math.max(0, Math.min(1, Math.random() * (vireax - 0.2)))
-      }));
-
       return {
         ...prev,
         gateStatus: nextGate,
         consecutiveGoFrames: nextGoFrames,
         consecutiveNoGoFrames: nextNoGoFrames,
         currentFrame: t + 1,
-        metrics: [...prev.metrics.slice(-100), newFrame],
-        nodes: updatedNodes,
+        // Ring buffer: keep last 100 points to ensure O(1) render time
+        metrics: [...prev.metrics.slice(-99), newFrame],
         activeContradiction
       };
     });
