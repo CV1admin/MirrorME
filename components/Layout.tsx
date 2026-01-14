@@ -1,7 +1,7 @@
 
 import React from 'react';
 import Sidebar from './Sidebar';
-import { SimulationState } from '../types';
+import { SimulationState, GateStatus } from '../types';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,23 +10,47 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, simState, toggleSimulation }) => {
+  const getGateColor = (status: GateStatus) => {
+    switch (status) {
+      case GateStatus.GO: return 'bg-green-500 text-green-950';
+      case GateStatus.STABILIZING: return 'bg-yellow-500 text-yellow-950';
+      case GateStatus.NOGO: return 'bg-red-500 text-red-50';
+      default: return 'bg-slate-700 text-slate-200';
+    }
+  };
+
+  const logicStatus = simState.activeContradiction 
+    ? { label: 'INCONSISTENT', color: 'text-rose-500' }
+    : { label: 'CONSISTENT (FOL)', color: 'text-emerald-500' };
+
   return (
     <div className="flex h-screen w-full bg-slate-950 text-slate-200 overflow-hidden">
       <Sidebar />
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50 backdrop-blur-md">
+        <header className="h-14 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50 backdrop-blur-md z-50">
           <div className="flex items-center gap-4">
-            <h1 className="font-bold tracking-tight text-lg text-cyan-400">MirrorMe <span className="text-slate-500 font-normal">/</span> Project MKone</h1>
+            <h1 className="font-bold tracking-tight text-lg text-cyan-400">MirrorMe <span className="text-slate-500 font-normal">/</span> MKone Audit</h1>
             <div className="h-4 w-[1px] bg-slate-700" />
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${simState.isRunning ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`} />
-              <span className="text-xs uppercase font-medium tracking-widest text-slate-400">
-                {simState.isRunning ? 'Live Engine Sync' : 'Engine Idle'}
-              </span>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Gate</span>
+              <div className={`px-2 py-0.5 rounded text-[10px] font-black tracking-tighter ${getGateColor(simState.gateStatus)}`}>
+                {simState.gateStatus}
+              </div>
+            </div>
+            <div className="h-4 w-[1px] bg-slate-700" />
+            <div className="flex flex-col">
+              <span className="text-[8px] uppercase font-bold text-slate-600">Logic Layer</span>
+              <span className={`text-[10px] font-black tracking-widest ${logicStatus.color}`}>{logicStatus.label}</span>
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col items-end">
+               <span className="text-[8px] uppercase font-bold text-slate-600">Cognitive Velocity</span>
+               <span className="text-xs mono text-cyan-500">
+                {simState.metrics[simState.metrics.length-1]?.gamma.toFixed(2) || '0.00'} Hz
+               </span>
+            </div>
              <button 
               onClick={toggleSimulation}
               className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
@@ -35,10 +59,10 @@ const Layout: React.FC<LayoutProps> = ({ children, simState, toggleSimulation })
                 : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400'
               }`}
             >
-              {simState.isRunning ? 'STOP SIMULATION' : 'START SIMULATION'}
+              {simState.isRunning ? 'TERMINATE RUN' : 'INITIALIZE SIM'}
             </button>
-            <div className="text-xs mono text-slate-500 bg-slate-800/50 px-2 py-1 rounded">
-              T+{simState.currentFrame.toString().padStart(6, '0')}
+            <div className="text-xs mono text-slate-500 bg-slate-800/50 px-2 py-1 rounded border border-slate-700">
+              ID:{simState.currentFrame.toString().padStart(6, '0')}
             </div>
           </div>
         </header>

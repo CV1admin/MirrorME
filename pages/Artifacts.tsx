@@ -7,8 +7,17 @@ const Artifacts: React.FC = () => {
     { id: 'art-1', name: 'mk1_sim_run_001.jsonl', type: 'json', size: '2.4 MB', createdAt: '2024-05-20 14:22' },
     { id: 'art-2', name: 'neural_topology_export.mp4', type: 'mp4', size: '12.8 MB', createdAt: '2024-05-20 15:45' },
     { id: 'art-3', name: 'metric_history_v3.csv', type: 'csv', size: '840 KB', createdAt: '2024-05-21 09:12' },
-    { id: 'art-4', name: 'snapshot_psi_delta.json', type: 'json', size: '1.2 MB', createdAt: '2024-05-21 10:30' },
+    { id: 'art-4', name: 'contradiction_repair_trap-001.json', type: 'logic_repair', size: '12 KB', createdAt: '2024-05-21 10:45' },
+    { id: 'art-5', name: 'snapshot_psi_delta.json', type: 'json', size: '1.2 MB', createdAt: '2024-05-21 10:30' },
   ];
+
+  const getTypeStyle = (type: string) => {
+    switch (type) {
+      case 'logic_repair': return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
+      case 'mp4': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+      default: return 'bg-slate-800 text-slate-400 border-slate-700';
+    }
+  };
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -45,8 +54,8 @@ const Artifacts: React.FC = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-800 text-slate-400 border border-slate-700">
-                    {art.type}
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${getTypeStyle(art.type)}`}>
+                    {art.type.replace('_', ' ')}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm text-slate-400">{art.size}</td>
@@ -64,10 +73,10 @@ const Artifacts: React.FC = () => {
 
       <div className="mt-12 p-8 bg-gradient-to-br from-indigo-900/20 to-slate-900/40 rounded-3xl border border-indigo-500/20 relative overflow-hidden">
         <div className="relative z-10 max-w-lg">
-          <h3 className="text-xl font-bold text-indigo-300 mb-2">Traceable Cognition Logs</h3>
-          <p className="text-slate-400 text-sm mb-6">Every simulation run produces a comprehensive storyboard report. Share these artifacts with your team for collaborative audit-trails.</p>
+          <h3 className="text-xl font-bold text-indigo-300 mb-2">Traceable Logic Audits</h3>
+          <p className="text-slate-400 text-sm mb-6">Contradiction resolution traces provide a "Logic Black Box" for autonomous reasoning systems. Review how conflicting axioms were repaired.</p>
           <button className="px-6 py-2.5 bg-indigo-500 text-slate-50 rounded-full text-sm font-bold shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 transition-all">
-            GENERATE TRACE REPORT
+            REVIEW LOGIC HISTORY
           </button>
         </div>
         <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl" />
