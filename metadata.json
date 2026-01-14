@@ -1,0 +1,8 @@
+{
+  "name": "MirrorMe Engineering Console",
+  "description": "A high-fidelity full-stack science platform for brain simulation orchestration, cognitive artifact tracking, and real-time neural metrics visualization.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
