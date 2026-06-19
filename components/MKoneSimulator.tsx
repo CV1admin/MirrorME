@@ -1,7 +1,6 @@
-
 import React, { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Float, Sphere, MeshDistortMaterial, Line, Points, PointMaterial } from '@react-three/drei';
+import { OrbitControls, Float, Sphere, MeshDistortMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 import { SimulationState, BrainNode } from '../types';
 
@@ -18,19 +17,18 @@ const BrainNodeMesh: React.FC<{ node: BrainNode; vireax: number; gamma: number; 
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
     
-    // Scale pulse linked to Gamma
     const pulseFactor = Math.sin(t * gamma * 0.5) * 0.2;
     const scale = (0.5 + node.activity * 1.5) + pulseFactor;
     meshRef.current.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.1);
     
-    // Position jitter linked to Drift
-    if (drift > 0.005) {
-      meshRef.current.position.x = initialPos.x + (Math.random() - 0.5) * drift;
-      meshRef.current.position.y = initialPos.y + (Math.random() - 0.5) * drift;
-      meshRef.current.position.z = initialPos.z + (Math.random() - 0.5) * drift;
+    // Drift is stored canonically in seconds. Convert to a visible multiplier for visual jitter only.
+    if (drift > 0.000005) {
+      const visualJitter = drift * 50;
+      meshRef.current.position.x = initialPos.x + (Math.random() - 0.5) * visualJitter;
+      meshRef.current.position.y = initialPos.y + (Math.random() - 0.5) * visualJitter;
+      meshRef.current.position.z = initialPos.z + (Math.random() - 0.5) * visualJitter;
     }
 
-    // Color shift based on Stability (vireax)
     if (meshRef.current.material instanceof THREE.MeshStandardMaterial) {
       const stabilityFactor = Math.max(0, 1 - vireax) * 100;
       const finalColor = baseColor.clone().lerp(new THREE.Color('#ff0000'), stabilityFactor);
@@ -42,7 +40,6 @@ const BrainNodeMesh: React.FC<{ node: BrainNode; vireax: number; gamma: number; 
 
   return (
     <Sphere ref={meshRef} position={node.position} args={[0.1, 16, 16]}>
-      {/* Fix: Use React.createElement to satisfy TypeScript for R3F lowercase intrinsic elements */}
       {React.createElement('meshStandardMaterial', {
         transparent: true,
         opacity: 0.8
@@ -69,7 +66,8 @@ const BrainCore: React.FC<{ vireax: number }> = ({ vireax }) => {
 };
 
 const MKoneSimulator: React.FC<{ simState: SimulationState }> = ({ simState }) => {
-  const latestMetric = simState.metrics[simState.metrics.length - 1] || { gamma: 42, vireax: 0.994, drift: 0.002 };
+  const latestMetric = simState.metrics[simState.metrics.length - 1] || { gamma: 42, vireax: 0.994, drift: 0.000005 };
+  const driftUs = latestMetric.drift * 1_000_000;
 
   return (
     <div className="w-full h-full bg-[#020617] relative">
@@ -81,14 +79,13 @@ const MKoneSimulator: React.FC<{ simState: SimulationState }> = ({ simState }) =
             {latestMetric.vireax.toFixed(4)}
           </span>
           <span className="text-slate-400">Temporal Drift (Δt):</span>
-          <span className="text-slate-200 mono">{latestMetric.drift.toFixed(5)}ms</span>
+          <span className="text-slate-200 mono">{driftUs.toFixed(2)}μs</span>
           <span className="text-slate-400">Coherence (γ):</span>
           <span className="text-indigo-400 font-bold mono">{latestMetric.gamma.toFixed(2)}Hz</span>
         </div>
       </div>
 
       <Canvas camera={{ position: [0, 0, 15], fov: 45 }}>
-        {/* Fix: Use React.createElement for lowercase tags to avoid JSX intrinsic elements TypeScript errors */}
         {React.createElement('fog', { attach: "fog", args: ['#020617', 10, 30] })}
         {React.createElement('ambientLight', { intensity: 0.4 })}
         {React.createElement('pointLight', { position: [10, 10, 10], intensity: 2, color: "#22d3ee" })}
@@ -112,7 +109,7 @@ const MKoneSimulator: React.FC<{ simState: SimulationState }> = ({ simState }) =
       <div className="absolute bottom-4 left-4 z-10">
         <div className="flex items-center gap-2 px-3 py-1 bg-slate-900/60 rounded border border-slate-800">
           <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Live Telemetry Linked</span>
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Live Simulated Telemetry</span>
         </div>
       </div>
     </div>
