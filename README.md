@@ -57,6 +57,8 @@ In GitHub repository settings, set:
 Settings → Pages → Source → GitHub Actions
 ```
 
+Latest clean deployment restart: 2026-06-19 08:00 America/New_York.
+
 ## Runtime note
 
 This public deployment is static. It does not include a backend database, persistent private memory, or verified hardware telemetry. Dashboard telemetry is generated client-side and should be treated as simulated.
