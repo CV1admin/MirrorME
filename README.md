@@ -58,6 +58,7 @@ Settings → Pages → Source → GitHub Actions
 ```
 
 Latest clean deployment restart: 2026-06-19 08:00 America/New_York.
+Latest deployment trigger after workflow cache fix: 2026-06-19 08:05 America/New_York.
 
 ## Runtime note
 
