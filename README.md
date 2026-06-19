@@ -15,6 +15,10 @@ A Vite + React application for the Civilisation.One / MirrorMe project.
 - Runtime settings page
 - GitHub Pages deployment workflow
 
+## Documentation
+
+- `docs/MIRRORME_SYSTEM_INSTRUCTION.md` — canonical MirrorMe compact offline model instruction v1.5-beta.
+
 ## Local development
 
 ```bash
