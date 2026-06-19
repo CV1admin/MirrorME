@@ -1,20 +1,70 @@
-# Civilisation.One
+# CVoneWeb — MirrorMe / MKone Engineering Console
 
-**Understand Yourself – Understand the Universe – Improve Civilization**
+A Vite + React application for the Civilisation.One / MirrorMe project.
 
-This repository contains a 3-page web application:
+## What is included
 
-1. **MirrorMe** – your personal AI engine.
-2. **Thin Line Theory** – explore fundamental science.
-3. **Civilisation Dashboard** – visualize and measure civilization progress.
+- MirrorMe / MKone dashboard layout
+- 3D cognitive field visualizer using React Three Fiber
+- Live simulated telemetry stream
+- Vireax stability / drift / error charts using Recharts
+- Cognitive Flight Recorder chat panel
+- Offline chat fallback for static GitHub Pages deployment
+- Contradiction Trap / logic audit panel
+- Artifact table
+- Runtime settings page
+- GitHub Pages deployment workflow
 
-The project is designed to run offline (local AI models) and can be containerized via Docker for easier deployment.
+## Local development
 
-For more details, see:
+```bash
+npm install
+npm run dev
+```
 
-- `docs/ARCHITECTURE.md`
-- `docs/INSTALLATION.md`
-- `docs/DEPLOYMENT.md`
-- `docs/MIRRORME.md`
-- `docs/THINLINE.md`
-- `docs/CIVILISATION.md`
+Open:
+
+```text
+http://localhost:3000
+```
+
+## Production build
+
+```bash
+npm run build
+npm run preview
+```
+
+## GitHub Pages deployment
+
+The repository includes:
+
+```text
+.github/workflows/deploy-pages.yml
+```
+
+The workflow builds the Vite app and publishes the `dist` directory to GitHub Pages on every push to `main`.
+
+Expected public URL after Pages is enabled:
+
+```text
+https://cv1admin.github.io/CVoneWeb/
+```
+
+In GitHub repository settings, set:
+
+```text
+Settings → Pages → Source → GitHub Actions
+```
+
+## Runtime note
+
+This public deployment is static. It does not include a backend database, persistent private memory, or verified hardware telemetry. Dashboard telemetry is generated client-side and should be treated as simulated.
+
+If `GEMINI_API_KEY` is not configured at build time, the chat uses the local offline fallback built into `services/geminiService.ts`.
+
+## Safety boundary
+
+- Do not paste secrets into chat.
+- Do not treat simulated telemetry as biological or hardware measurement.
+- Declared metrics are hypotheses until connected to verified instrumentation.
