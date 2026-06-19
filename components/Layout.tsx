@@ -29,7 +29,7 @@ const Layout: React.FC<LayoutProps> = ({ children, simState, toggleSimulation })
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50 backdrop-blur-md z-50">
           <div className="flex items-center gap-4">
-            <h1 className="font-bold tracking-tight text-lg text-cyan-400">MirrorMe <span className="text-slate-500 font-normal">/</span> MKone Audit</h1>
+            <h1 className="font-bold tracking-tight text-lg text-cyan-400">Civilisation.One <span className="text-slate-500 font-normal">/</span> Unified Intelligence Console</h1>
             <div className="h-4 w-[1px] bg-slate-700" />
             <div className="flex items-center gap-3">
               <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Gate</span>

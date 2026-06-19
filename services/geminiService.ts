@@ -1,9 +1,166 @@
 import { GoogleGenAI } from "@google/genai";
 import { Message, Role, AuditMetadata } from "../types";
 
+type Provider = 'gemini' | 'ollama';
+
+interface ModelConfig {
+  provider: Provider;
+  geminiApiKey?: string;
+  ollamaEndpoint?: string;
+  ollamaModel?: string;
+}
+
+interface StreamResult {
+  text: string;
+  done: boolean;
+  audit?: AuditMetadata;
+}
+
+const MODEL_CONFIG_KEY = 'mirrorme_model_config';
+
+function loadModelConfig(): ModelConfig {
+  const defaults: ModelConfig = {
+    provider: 'gemini',
+    ollamaEndpoint: 'http://localhost:11434',
+    ollamaModel: 'llama3.1:8b',
+  };
+
+  if (typeof window === 'undefined') return defaults;
+
+  try {
+    const raw = window.localStorage.getItem(MODEL_CONFIG_KEY);
+    if (!raw) return defaults;
+    const parsed = JSON.parse(raw) as Partial<ModelConfig>;
+    return {
+      ...defaults,
+      ...parsed,
+    };
+  } catch {
+    return defaults;
+  }
+}
+
+function extractAuditFromText(fullText: string): AuditMetadata | undefined {
+  const auditMatch = fullText.match(/AUDIT_BLOCK:\s*(\{[\s\S]*?\})/);
+  if (!auditMatch) return undefined;
+
+  try {
+    return JSON.parse(auditMatch[1]) as AuditMetadata;
+  } catch (e) {
+    console.warn('Audit extraction failed', e);
+    return undefined;
+  }
+}
+
+async function* streamWithGemini(
+  contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
+  systemInstruction: string,
+  apiKey?: string
+): AsyncGenerator<StreamResult> {
+  const resolvedKey = apiKey || process.env.API_KEY;
+  if (!resolvedKey) {
+    yield {
+      text: 'Gemini API key missing. Configure it in Settings or environment.',
+      done: true,
+    };
+    return;
+  }
+
+  const ai = new GoogleGenAI({ apiKey: resolvedKey });
+  const streamResponse = await ai.models.generateContentStream({
+    model: 'gemini-3-pro-preview',
+    contents: contents as any,
+    config: {
+      systemInstruction,
+      temperature: 0.1,
+    },
+  });
+
+  let fullAccumulated = '';
+  for await (const chunk of streamResponse) {
+    const text = chunk.text;
+    if (text) {
+      fullAccumulated += text;
+      yield { text, done: false };
+    }
+  }
+
+  yield {
+    text: '',
+    done: true,
+    audit: extractAuditFromText(fullAccumulated),
+  };
+}
+
+async function* streamWithOllama(
+  history: Message[],
+  systemInstruction: string,
+  endpoint: string,
+  model: string
+): AsyncGenerator<StreamResult> {
+  const response = await fetch(`${endpoint.replace(/\/$/, '')}/api/chat`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      stream: true,
+      messages: [
+        { role: 'system', content: systemInstruction },
+        ...history.map(m => ({
+          role: m.role === Role.USER ? 'user' : 'assistant',
+          content: m.content,
+        })),
+      ],
+    }),
+  });
+
+  if (!response.ok || !response.body) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Ollama request failed (${response.status}). ${detail}`.trim());
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let fullAccumulated = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const parsed = JSON.parse(line) as {
+          done?: boolean;
+          message?: { content?: string };
+        };
+        const token = parsed.message?.content || '';
+        if (token) {
+          fullAccumulated += token;
+          yield { text: token, done: false };
+        }
+      } catch {
+        // Ignore malformed partial lines and continue consuming stream.
+      }
+    }
+  }
+
+  yield {
+    text: '',
+    done: true,
+    audit: extractAuditFromText(fullAccumulated),
+  };
+}
+
 export async function* sendMessageStream(history: Message[], currentMetrics?: any) {
-  // Always create a new GoogleGenAI instance right before making an API call.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const config = loadModelConfig();
 
   const contents = history.map(m => ({
     role: m.role === Role.USER ? 'user' : 'model',
@@ -44,39 +201,23 @@ export async function* sendMessageStream(history: Message[], currentMetrics?: an
   If stability (v) < 0.99 or error (ε) > 0.05, prioritize identifying the failure vector over general conversation.`;
 
   try {
-    const streamResponse = await ai.models.generateContentStream({
-      model: 'gemini-3-pro-preview',
-      contents: contents as any,
-      config: {
-        systemInstruction,
-        temperature: 0.1, // Highly deterministic for auditing
-      },
-    });
-
-    let fullAccumulated = "";
-    for await (const chunk of streamResponse) {
-      // Access text directly from the response chunk property.
-      const text = chunk.text;
-      if (text) {
-        fullAccumulated += text;
-        yield { text, done: false };
+    if (config.provider === 'ollama') {
+      const endpoint = config.ollamaEndpoint || 'http://localhost:11434';
+      const model = config.ollamaModel || 'llama3.1:8b';
+      for await (const chunk of streamWithOllama(history, systemInstruction, endpoint, model)) {
+        yield chunk;
       }
+      return;
     }
 
-    // Extract Audit JSON from the tail of the stream.
-    let audit: AuditMetadata | undefined;
-    const auditMatch = fullAccumulated.match(/AUDIT_BLOCK:\s*(\{[\s\S]*?\})/);
-    if (auditMatch) {
-      try {
-        audit = JSON.parse(auditMatch[1]);
-      } catch (e) {
-        console.warn("Audit extraction failed", e);
-      }
+    for await (const chunk of streamWithGemini(contents as any, systemInstruction, config.geminiApiKey)) {
+      yield chunk;
     }
-
-    yield { text: "", done: true, audit };
   } catch (error) {
-    console.error("Gemini Stream Error:", error);
-    yield { text: "Audit stream interrupted. Protocol violation or connection failure.", done: true };
+    console.error('Model stream error:', error);
+    yield {
+      text: 'Audit stream interrupted. Verify provider config and model endpoint.',
+      done: true,
+    };
   }
 }

@@ -1,13 +1,120 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+
+type Provider = 'gemini' | 'ollama';
+
+interface ModelConfig {
+  provider: Provider;
+  geminiApiKey: string;
+  ollamaEndpoint: string;
+  ollamaModel: string;
+}
+
+const MODEL_CONFIG_KEY = 'mirrorme_model_config';
+
+const DEFAULT_CONFIG: ModelConfig = {
+  provider: 'gemini',
+  geminiApiKey: '',
+  ollamaEndpoint: 'http://localhost:11434',
+  ollamaModel: 'llama3.1:8b',
+};
 
 const Settings: React.FC = () => {
+  const [config, setConfig] = useState<ModelConfig>(DEFAULT_CONFIG);
+  const [savedAt, setSavedAt] = useState<string>('');
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(MODEL_CONFIG_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<ModelConfig>;
+      setConfig(prev => ({ ...prev, ...parsed }));
+    } catch {
+      // Keep defaults when local storage payload is invalid.
+    }
+  }, []);
+
+  const saveConfig = () => {
+    window.localStorage.setItem(MODEL_CONFIG_KEY, JSON.stringify(config));
+    setSavedAt(new Date().toLocaleTimeString());
+  };
+
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <h2 className="text-3xl font-bold text-slate-100 mb-2">Engine Configuration</h2>
       <p className="text-slate-400 mb-8">Adjust the MKone brain simulator parameters and system truth-layers.</p>
 
       <div className="space-y-6">
+        <section className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Inference Model</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-slate-400">Provider</label>
+              <select
+                value={config.provider}
+                onChange={(e) => setConfig(prev => ({ ...prev, provider: e.target.value as Provider }))}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500"
+              >
+                <option value="gemini">Gemini (Cloud)</option>
+                <option value="ollama">Ollama (Local)</option>
+              </select>
+            </div>
+
+            {config.provider === 'gemini' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-400">Gemini API Key (optional override)</label>
+                <input
+                  type="password"
+                  value={config.geminiApiKey}
+                  onChange={(e) => setConfig(prev => ({ ...prev, geminiApiKey: e.target.value }))}
+                  placeholder="AIza..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+            )}
+
+            {config.provider === 'ollama' && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-400">Ollama Endpoint</label>
+                  <input
+                    type="text"
+                    value={config.ollamaEndpoint}
+                    onChange={(e) => setConfig(prev => ({ ...prev, ollamaEndpoint: e.target.value }))}
+                    placeholder="http://localhost:11434"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-400">Ollama Model</label>
+                  <input
+                    type="text"
+                    value={config.ollamaModel}
+                    onChange={(e) => setConfig(prev => ({ ...prev, ollamaModel: e.target.value }))}
+                    placeholder="llama3.1:8b"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="mt-5 flex items-center gap-3">
+            <button
+              onClick={saveConfig}
+              className="px-4 py-2 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-lg text-xs font-bold hover:bg-cyan-500/20 transition-all uppercase"
+            >
+              Save Model Config
+            </button>
+            {savedAt && <span className="text-[11px] text-slate-500">Saved at {savedAt}</span>}
+          </div>
+
+          <p className="text-xs text-slate-500 mt-4">
+            Local mode uses Ollama chat API and runs entirely on your machine.
+          </p>
+        </section>
+
         <section className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
           <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Neural Parameters</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
