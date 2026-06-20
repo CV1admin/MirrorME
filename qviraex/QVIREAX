@@ -1,0 +1,17 @@
+QVIREAX / MRQL, GAILP, and VIREAX baseline marker
+
+This workspace now treats `qviraex/` as the home for MRQL v0.1 and the surrounding MKalfa orchestration experiments.
+The first implemented slice is:
+
+- `qviraex/mrql/schema/ritual.schema.json`
+- `qviraex/mrql/parser.py`
+- `qviraex/mrql/validator.py`
+- `qviraex/mrql/ast.py`
+
+The Global AI LAB Pipeline scaffold lives under `global_ai_lab/` and provides a lawful local orchestration layer with adapters, policy gates, consensus scoring, and audit hashes.
+
+The VIREAX Center Node scaffold now lives under `qviraex/vireax/` as a standalone multi-model reasoning controller.
+
+The parser accepts the signed ritual syntax from the MRQL definition and produces a compact AST for validation or later runtime execution.
+
+

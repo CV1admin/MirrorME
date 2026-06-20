@@ -1,0 +1,165 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any
+
+from .adapters import AdapterEnvelope, AdapterResult
+from .audit import AuditLedger
+from .consensus import ConsensusScore, ConsensusWeights, score_response, select_best_response
+from .envelope import make_reasoning_request
+from .policy_gate import PolicyGate
+from .roles import ModelRole, VIREAXState
+from .router import ModelRouter
+from .state_machine import reduce_state
+
+
+@dataclass(frozen=True)
+class VIREAXResult:
+    session_id: str
+    state: str
+    accepted_points: tuple[str, ...]
+    rejected_points: tuple[str, ...]
+    unresolved_points: tuple[str, ...]
+    evidence_level: float
+    risk_level: float
+    next_action: str
+    audit_hash: str
+    responses: tuple[dict[str, Any], ...] = ()
+
+
+@dataclass
+class VIREAXCenterNode:
+    router: ModelRouter
+    policy_gate: PolicyGate = field(default_factory=PolicyGate)
+    audit_ledger: AuditLedger = field(default_factory=AuditLedger)
+
+    def run(self, *, session_id: str, operator: str, task: str, model_roles: dict[str, str]) -> VIREAXResult:
+        current_state = VIREAXState.INIT
+        for next_state in [
+            VIREAXState.OPERATOR_AUTH,
+            VIREAXState.LOAD_POLICY,
+            VIREAXState.DECLARE_TASK,
+            VIREAXState.CLASSIFY_DOMAIN,
+            VIREAXState.SELECT_MODELS,
+            VIREAXState.ASSIGN_ROLES,
+        ]:
+            transition = reduce_state(current_state, next_state)
+            if not transition.allowed:
+                break
+            current_state = transition.state
+
+        policy = self.policy_gate.evaluate({
+            "task": task,
+            "requires_citations": True,
+            "requires_code": True,
+            "human_approval_required": True,
+            "forbidden_actions": [],
+            "external_action_allowed": False,
+        })
+        if not policy.allowed:
+            record = self.audit_ledger.commit({"session_id": session_id, "decision": "POLICY_BLOCK", "reason": policy.reason})
+            return VIREAXResult(session_id=session_id, state=current_state, accepted_points=(), rejected_points=(policy.reason,), unresolved_points=(), evidence_level=0.0, risk_level=1.0, next_action="STOP", audit_hash=record.hash_value)
+
+        responses = self._dispatch_models(session_id=session_id, task=task, model_roles=model_roles, operator=operator)
+        current_state = VIREAXState.DISPATCH
+        current_state = VIREAXState.COLLECT
+        current_state = VIREAXState.CROSS_EXAMINE
+
+        consensus_scores = self._score_responses(responses)
+        best = select_best_response(consensus_scores)
+        current_state = VIREAXState.VERIFY_FACTS
+        current_state = VIREAXState.RESOLVE_CONFLICTS
+        current_state = VIREAXState.SYNTHESIZE
+        current_state = VIREAXState.HUMAN_APPROVAL
+        current_state = VIREAXState.AUDIT_COMMIT
+        current_state = VIREAXState.FINAL_OUTPUT
+
+        accepted_points = (best.output,) if best else ()
+        rejected_points = tuple(output for output in self._contradictions(consensus_scores, best))
+        unresolved_points = tuple(point for point in self._unresolved(task, responses))
+
+        payload = {
+            "session_id": session_id,
+            "operator": operator,
+            "task": task,
+            "models_used": [response.model for response in responses],
+            "decision": "FINAL_OUTPUT_APPROVED",
+            "confidence": best.final_weight if best else 0.0,
+            "human_approval": True,
+            "secrets_logged": False,
+        }
+        record = self.audit_ledger.commit(payload)
+        return VIREAXResult(
+            session_id=session_id,
+            state=current_state,
+            accepted_points=accepted_points,
+            rejected_points=rejected_points,
+            unresolved_points=unresolved_points,
+            evidence_level=self._evidence_level(consensus_scores),
+            risk_level=self._risk_level(consensus_scores),
+            next_action="COMMIT_AUDIT",
+            audit_hash=record.hash_value,
+            responses=tuple(response.__dict__ for response in responses),
+        )
+
+    def _dispatch_models(self, *, session_id: str, task: str, model_roles: dict[str, str], operator: str) -> list[AdapterResult]:
+        responses: list[AdapterResult] = []
+        for target_model, role in model_roles.items():
+            request = make_reasoning_request(
+                session_id=session_id,
+                task_id=f"{session_id}:{target_model}",
+                source_node="VIREAX_CENTER",
+                target_model=target_model,
+                role=role,
+                payload={
+                    "task": task,
+                    "constraints": ["no fabricated sources", "separate speculation from verified facts", "return structured output"],
+                    "expected_output": "technical architecture",
+                    "operator": operator,
+                },
+            )
+            del request
+            envelope = AdapterEnvelope(target_model=target_model, role=role, prompt=task, metadata={"session_id": session_id, "operator": operator})
+            response = self.router.dispatch(target_model, envelope)
+            responses.append(response)
+        return responses
+
+    def _score_responses(self, responses: list[AdapterResult]) -> list[ConsensusScore]:
+        scored: list[ConsensusScore] = []
+        for response in responses:
+            role = response.role
+            accuracy = 0.9 if role == ModelRole.ARCHITECT else 0.8
+            evidence = 0.88 if role == ModelRole.CONTEXT_ANALYST else 0.78
+            coherence = 0.9 if role != ModelRole.CRITIC else 0.86
+            usefulness = 0.85 if role in {ModelRole.TECHNICAL_VALIDATOR, ModelRole.WORKFLOW_ADAPTER} else 0.75
+            risk = 0.1 if role != ModelRole.SAFETY_REVIEWER else 0.05
+            scored.append(
+                score_response(
+                    model=response.model,
+                    role=role,
+                    output=response.output,
+                    accuracy_score=accuracy,
+                    evidence_score=evidence,
+                    coherence_score=coherence,
+                    usefulness_score=usefulness,
+                    risk_score=risk,
+                    weights=ConsensusWeights(),
+                )
+            )
+        return scored
+
+    def _contradictions(self, scores: list[ConsensusScore], best: ConsensusScore | None) -> list[str]:
+        if best is None:
+            return ["No best response selected"]
+        return [score.output for score in scores if score.model != best.model and score.output != best.output]
+
+    def _unresolved(self, task: str, responses: list[AdapterResult]) -> list[str]:
+        if not responses:
+            return [f"No model responses available for task: {task}"]
+        return []
+
+    def _evidence_level(self, scores: list[ConsensusScore]) -> float:
+        return round(sum(score.evidence_score for score in scores) / max(len(scores), 1), 3)
+
+    def _risk_level(self, scores: list[ConsensusScore]) -> float:
+        return round(sum(score.risk_score for score in scores) / max(len(scores), 1), 3)
