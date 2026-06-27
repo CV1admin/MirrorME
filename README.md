@@ -14,10 +14,14 @@ A Vite + React application for the Civilisation.One / MirrorMe project.
 - Artifact table
 - Runtime settings page
 - GitHub Pages deployment workflow
+- MK-HIGE information-system engine prototype
+- Complex matrix validation for MirrorME local model state safety
 
 ## Documentation
 
 - `docs/MIRRORME_SYSTEM_INSTRUCTION.md` — canonical MirrorMe compact offline model instruction v1.5-beta.
+- `docs/MK_HIGE_INFORMATION_SYSTEM_ENGINE.md` — measurable information-system engine for coherence, entropy potential, resonance, and harmony.
+- `docs/MIRRORME_LOCAL_MODEL_UPGRADE.md` — local model complex trace and Hermitian validation guardrails.
 
 ## Local development
 
@@ -31,6 +35,22 @@ Open:
 ```text
 http://localhost:3000
 ```
+
+## HIGE local model validation
+
+Run complex matrix runtime validation:
+
+```bash
+npm run test:hige:complex
+```
+
+Run the HIGE type-checker:
+
+```bash
+npm run typecheck:hige
+```
+
+The complex validator checks square shape, finite entries, Hermitian repair, real trace normalization, and suppression of imaginary trace drift before local-model state is used by HIGE/QHEL-style metrics.
 
 ## Production build
 
@@ -76,3 +96,4 @@ If `GEMINI_API_KEY` is not configured at build time, the chat uses the local off
 - Do not paste secrets into chat.
 - Do not treat simulated telemetry as biological or hardware measurement.
 - Declared metrics are hypotheses until connected to verified instrumentation.
+- Complex matrix validation is a software guardrail, not proof of physical quantum computation.
