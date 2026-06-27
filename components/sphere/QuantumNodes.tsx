@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Html } from '@react-three/drei';
+import type { ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 
 export interface QuantumNodeMetrics {
@@ -101,8 +102,8 @@ const QuantumNode: React.FC<QuantumNodeProps> = ({
 
   const coherencePct = Math.round(clamp01(metrics.coherence) * 100);
 
-  const handleSelect = (event?: { stopPropagation?: () => void }) => {
-    event?.stopPropagation?.();
+  const handleSelect = (event: ThreeEvent<MouseEvent>) => {
+    event.stopPropagation();
     onSelect?.(nodeData);
   };
 
