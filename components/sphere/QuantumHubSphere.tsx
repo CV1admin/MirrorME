@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import { QuantumNodeLayer, quantumResearchNodes } from './QuantumNodes';
+import type { QuantumNodeData } from './QuantumNodes';
+import QuantumDashboard from './QuantumDashboard';
 import { calculateQuantumNetworkHealth } from '../../lib/civScore';
 
 const QuantumHubSphere: React.FC = () => {
+  const [selectedNode, setSelectedNode] = useState<QuantumNodeData | null>(null);
   const networkHealth = calculateQuantumNetworkHealth(quantumResearchNodes);
 
   return (
@@ -33,10 +36,21 @@ const QuantumHubSphere: React.FC = () => {
             <meshStandardMaterial color="#07111f" roughness={0.95} metalness={0.15} wireframe />
           </mesh>
 
-          <QuantumNodeLayer nodes={quantumResearchNodes} globeRadius={2.1} privacyMode="cluster" />
+          <QuantumNodeLayer
+            nodes={quantumResearchNodes}
+            globeRadius={2.1}
+            privacyMode="cluster"
+            onSelect={setSelectedNode}
+          />
           <OrbitControls enablePan={false} minDistance={3.2} maxDistance={8} />
         </Canvas>
       </div>
+
+      <div className="mt-3 text-xs text-slate-500">
+        Click a node to inspect coherence, spectral dimension, final state, and CIV1 quantum pillar contribution.
+      </div>
+
+      <QuantumDashboard node={selectedNode} onClose={() => setSelectedNode(null)} />
     </section>
   );
 };
