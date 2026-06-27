@@ -1,23 +1,18 @@
-# CVoneWeb — MirrorMe / MKone Engineering Console
+# MirrorME — Civilisation.One Engineering Console
 
-A Vite + React application for the Civilisation.One / MirrorMe project.
+A Vite + React + TypeScript application for the Civilisation.One / MirrorME project.
 
 ## What is included
 
-- MirrorMe / MKone dashboard layout
-- 3D cognitive field visualizer using React Three Fiber
+- MirrorME / MKone dashboard layout
 - Live simulated telemetry stream
-- Vireax stability / drift / error charts using Recharts
+- Vireax stability, drift, and error state handling
 - Cognitive Flight Recorder chat panel
-- Offline chat fallback for static GitHub Pages deployment
+- Local/Ollama chat path for private local testing
+- Gemini browser test path when `VITE_GEMINI_API_KEY` is explicitly configured
 - Contradiction Trap / logic audit panel
-- Artifact table
-- Runtime settings page
+- Civilisation.One dashboard layer
 - GitHub Pages deployment workflow
-
-## Documentation
-
-- `docs/MIRRORME_SYSTEM_INSTRUCTION.md` — canonical MirrorMe compact offline model instruction v1.5-beta.
 
 ## Local development
 
@@ -32,12 +27,45 @@ Open:
 http://localhost:3000
 ```
 
-## Production build
+## Checks and production build
 
 ```bash
+npm run typecheck
 npm run build
+```
+
+Or run both:
+
+```bash
+npm run check
+```
+
+Preview the production build:
+
+```bash
 npm run preview
 ```
+
+## Environment
+
+Copy `.env.example` to `.env.local` for local development.
+
+```bash
+cp .env.example .env.local
+```
+
+Use:
+
+```text
+VITE_GEMINI_API_KEY=
+OPENAI_API_KEY=
+```
+
+Security boundary:
+
+- `VITE_GEMINI_API_KEY` is browser-visible and only suitable for local/demo browser testing.
+- `OPENAI_API_KEY` is server-only. Do not expose it in Vite client code.
+- `.env.local` is ignored by Git.
 
 ## GitHub Pages deployment
 
@@ -52,7 +80,7 @@ The workflow builds the Vite app and publishes the `dist` directory to GitHub Pa
 Expected public URL after Pages is enabled:
 
 ```text
-https://cv1admin.github.io/CVoneWeb/
+https://cv1admin.github.io/MirrorME/
 ```
 
 In GitHub repository settings, set:
@@ -61,18 +89,13 @@ In GitHub repository settings, set:
 Settings → Pages → Source → GitHub Actions
 ```
 
-Latest clean deployment restart: 2026-06-19 08:00 America/New_York.
-Latest deployment trigger after workflow cache fix: 2026-06-19 08:05 America/New_York.
-Latest rerun trigger: 2026-06-19 08:10 America/New_York.
-
 ## Runtime note
 
 This public deployment is static. It does not include a backend database, persistent private memory, or verified hardware telemetry. Dashboard telemetry is generated client-side and should be treated as simulated.
 
-If `GEMINI_API_KEY` is not configured at build time, the chat uses the local offline fallback built into `services/geminiService.ts`.
-
 ## Safety boundary
 
 - Do not paste secrets into chat.
+- Do not commit `.env`, `.env.local`, `node_modules`, `.next`, `dist`, or `build`.
 - Do not treat simulated telemetry as biological or hardware measurement.
 - Declared metrics are hypotheses until connected to verified instrumentation.
