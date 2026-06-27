@@ -11,7 +11,7 @@ const QuantumHubSphere: React.FC = () => {
   const networkHealth = calculateQuantumNetworkHealth(quantumResearchNodes);
 
   return (
-    <section className="rounded-2xl border border-cyan-500/25 bg-slate-950 p-4">
+    <section className="relative rounded-2xl border border-cyan-500/25 bg-slate-950 p-4">
       <div className="mb-3 flex items-end justify-between gap-4">
         <div>
           <h3 className="text-xs font-bold uppercase tracking-widest text-cyan-300">Civilisation.One Hub Sphere</h3>
