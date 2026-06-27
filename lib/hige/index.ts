@@ -1,3 +1,5 @@
+export * from "./complexMatrix";
+
 export const HIGE_ENGINE_VERSION = "0.1.0";
 
 export type HigeWeights = {
