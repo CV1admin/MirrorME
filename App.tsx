@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import MirrorMe from './pages/MirrorMe';
 import ThinLineTheory from './pages/ThinLineTheory';
 import CivilisationDashboard from './pages/CivilisationDashboard';
+import QuantumHub from './pages/QuantumHub';
 import { SimulationState, MetricFrame, BrainNode, GateStatus, ContradictionEvent } from './types';
 
 const INITIAL_NODES: BrainNode[] = Array.from({ length: 40 }).map((_, i) => ({
@@ -144,6 +144,7 @@ const App: React.FC = () => {
           <Route path="/mirrorme" element={<MirrorMe simState={simState} />} />
           <Route path="/thin-line-theory" element={<ThinLineTheory />} />
           <Route path="/civilisation-dashboard" element={<CivilisationDashboard />} />
+          <Route path="/quantum-hub" element={<QuantumHub />} />
         </Routes>
       </Layout>
     </HashRouter>

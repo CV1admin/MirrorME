@@ -1,0 +1,11 @@
+# Optional Python dependencies for MirrorMe quantum-simulation stubs.
+# These are not required for the Vite frontend.
+
+pennylane
+pennylane-lightning
+torch
+torchvision
+torchaudio
+
+# Optional GPU simulator support may require a CUDA-compatible environment:
+# pennylane-lightning[gpu]
