@@ -13,6 +13,7 @@ A Vite + React application for the Civilisation.One / MirrorMe project.
 - Contradiction Trap / logic audit panel
 - Artifact table
 - Runtime settings page
+- Civilisation.One Quantum Hub sphere with clickable research nodes
 - GitHub Pages deployment workflow
 
 ## Documentation
@@ -21,10 +22,20 @@ A Vite + React application for the Civilisation.One / MirrorMe project.
 - `docs/protocols/CHATGPT_HANDSHAKE_PROTOCOL.md` — general user-to-AI session initialization, TCP alignment, parameter negotiation, and closure protocol.
 - `docs/protocols/GROK_HANDSHAKE_PROTOCOL.md` — Grok adapter admission gate for identity, capability, memory alignment, coherence, and trust scoring before active MirrorMe session opening.
 
+## Frontend quantum hub
+
+- `pages/QuantumHub.tsx` — routed page for the interactive Civilisation.One Quantum Hub.
+- `components/sphere/QuantumHubSphere.tsx` — React Three Fiber scene with orbit controls and research cluster nodes.
+- `components/sphere/QuantumNodes.tsx` — clickable quantum node layer with cluster coordinates and metrics.
+- `components/sphere/QuantumDashboard.tsx` — side dashboard for selected node metrics.
+- `lib/civScore.ts` — CIV1 quantum health and weighted pillar helpers.
+
 ## Python reference stubs
 
 - `src/adapters/grok_handshake.py` — two-step Grok challenge/response admission stub with deterministic scoring and permission gating.
 - `src/adapters/local_quantum_network.py` — local model network stub with tensor-memory records and simulated quantum-inspired coordination channels.
+- `src/adapters/pennylane_quantum_network.py` — optional PennyLane + Torch hybrid quantum-classical simulation stub.
+- `requirements-quantum.txt` — optional Python requirements for PennyLane/Torch experiments.
 
 These Python modules are reference implementations. They are not imported by the Vite frontend by default.
 
@@ -39,6 +50,24 @@ Open:
 
 ```text
 http://localhost:3000
+```
+
+Quantum Hub route:
+
+```text
+/#/quantum-hub
+```
+
+## Optional Python quantum simulation setup
+
+```bash
+pip install -r requirements-quantum.txt
+```
+
+For GPU-backed PennyLane Lightning simulation, install and configure a CUDA-compatible environment before enabling:
+
+```bash
+pip install "pennylane-lightning[gpu]"
 ```
 
 ## Production build
@@ -84,4 +113,6 @@ If `GEMINI_API_KEY` is not configured at build time, the chat uses the local off
 
 - Do not paste secrets into chat.
 - Do not treat simulated telemetry as biological or hardware measurement.
+- Do not treat simulated quantum-inspired channels as physical entanglement or QKD.
+- Do not display private person/device locations as exact public nodes.
 - Declared metrics are hypotheses until connected to verified instrumentation.
