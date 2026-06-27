@@ -21,6 +21,13 @@ A Vite + React application for the Civilisation.One / MirrorMe project.
 - `docs/protocols/CHATGPT_HANDSHAKE_PROTOCOL.md` — general user-to-AI session initialization, TCP alignment, parameter negotiation, and closure protocol.
 - `docs/protocols/GROK_HANDSHAKE_PROTOCOL.md` — Grok adapter admission gate for identity, capability, memory alignment, coherence, and trust scoring before active MirrorMe session opening.
 
+## Python reference stubs
+
+- `src/adapters/grok_handshake.py` — two-step Grok challenge/response admission stub with deterministic scoring and permission gating.
+- `src/adapters/local_quantum_network.py` — local model network stub with tensor-memory records and simulated quantum-inspired coordination channels.
+
+These Python modules are reference implementations. They are not imported by the Vite frontend by default.
+
 ## Local development
 
 ```bash
