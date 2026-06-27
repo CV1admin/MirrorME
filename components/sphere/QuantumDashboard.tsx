@@ -15,7 +15,7 @@ const QuantumDashboard: React.FC<QuantumDashboardProps> = ({ node, onClose }) =>
   const coherencePct = Math.round(node.metrics.coherence * 100);
 
   return (
-    <aside className="fixed right-4 top-20 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-cyan-400/50 bg-zinc-950/95 p-6 text-white shadow-2xl shadow-cyan-500/20 backdrop-blur-xl transition-transform duration-200 md:right-6 md:top-24">
+    <aside className="fixed right-4 top-20 z-50 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-cyan-400/50 bg-zinc-950/95 p-6 text-white shadow-2xl shadow-cyan-500/20 backdrop-blur-xl transition-transform duration-200 md:right-6 md:top-24 md:w-96">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h2 className="font-mono text-2xl text-cyan-300">{node.label}</h2>
