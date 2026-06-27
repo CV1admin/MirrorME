@@ -6,6 +6,7 @@ export interface QuantumNodeMetrics {
   coherence: number;
   spectralDim: number;
   finalState: string;
+  count?: number;
 }
 
 export interface QuantumNodeData {
@@ -22,6 +23,7 @@ export interface QuantumNodeData {
 export interface QuantumNodeProps extends QuantumNodeData {
   globeRadius?: number;
   privacyMode?: 'cluster' | 'exact';
+  onSelect?: (node: QuantumNodeData) => void;
 }
 
 export const quantumResearchNodes: QuantumNodeData[] = [
@@ -33,7 +35,7 @@ export const quantumResearchNodes: QuantumNodeData[] = [
     label: 'QRC-L3 Core',
     color: '#00ffcc',
     pulse: true,
-    metrics: { coherence: 0.85, spectralDim: 2.95, finalState: '(3,3,3)' },
+    metrics: { coherence: 0.85, spectralDim: 2.95, finalState: '(3,3,3)', count: 512 },
   },
   {
     id: 'qrc-l3-mirror-london-cluster',
@@ -43,7 +45,7 @@ export const quantumResearchNodes: QuantumNodeData[] = [
     label: 'QRC-L3 Mirror',
     color: '#00ccff',
     pulse: true,
-    metrics: { coherence: 0.82, spectralDim: 2.81, finalState: '(3,3,3)' },
+    metrics: { coherence: 0.82, spectralDim: 2.81, finalState: '(3,3,3)', count: 384 },
   },
   {
     id: 'qrc-l3-edge-tokyo-cluster',
@@ -53,7 +55,7 @@ export const quantumResearchNodes: QuantumNodeData[] = [
     label: 'QRC-L3 Edge',
     color: '#ff00aa',
     pulse: false,
-    metrics: { coherence: 0.79, spectralDim: 2.65, finalState: '(6,5,4)' },
+    metrics: { coherence: 0.79, spectralDim: 2.65, finalState: '(6,5,4)', count: 256 },
   },
 ];
 
@@ -75,6 +77,7 @@ export const latLngToSpherePosition = (
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
 
 const QuantumNode: React.FC<QuantumNodeProps> = ({
+  id,
   lat,
   lng,
   score,
@@ -84,25 +87,36 @@ const QuantumNode: React.FC<QuantumNodeProps> = ({
   metrics,
   globeRadius = 2.1,
   privacyMode = 'cluster',
+  onSelect,
 }) => {
   const position = useMemo(
     () => latLngToSpherePosition(lat, lng, globeRadius),
     [lat, lng, globeRadius],
   );
 
+  const nodeData = useMemo<QuantumNodeData>(
+    () => ({ id, lat, lng, score, label, color, pulse, metrics }),
+    [id, lat, lng, score, label, color, pulse, metrics],
+  );
+
   const coherencePct = Math.round(clamp01(metrics.coherence) * 100);
 
+  const handleSelect = (event?: { stopPropagation?: () => void }) => {
+    event?.stopPropagation?.();
+    onSelect?.(nodeData);
+  };
+
   return (
-    <group position={position}>
-      <mesh>
-        <sphereGeometry args={[0.08, 32, 32]} />
-        <meshBasicMaterial color={color} transparent opacity={0.9} />
+    <group position={position} onClick={handleSelect}>
+      <mesh onClick={handleSelect}>
+        <sphereGeometry args={[0.085, 48, 48]} />
+        <meshBasicMaterial color={color} transparent opacity={0.95} />
       </mesh>
 
       {pulse && (
         <mesh>
-          <ringGeometry args={[0.12, 0.18, 64]} />
-          <meshBasicMaterial color={color} transparent opacity={0.4} side={THREE.DoubleSide} />
+          <ringGeometry args={[0.13, 0.19, 64]} />
+          <meshBasicMaterial color={color} transparent opacity={0.35} side={THREE.DoubleSide} />
         </mesh>
       )}
 
@@ -125,7 +139,7 @@ const QuantumNode: React.FC<QuantumNodeProps> = ({
           </div>
 
           <div className="mt-2 border-t border-cyan-400/20 pt-1 text-[9px] uppercase tracking-widest text-slate-500">
-            {privacyMode === 'cluster' ? 'Cluster coordinate' : 'Exact coordinate'}
+            {privacyMode === 'cluster' ? 'Cluster coordinate' : 'Exact coordinate'} · click for detail
           </div>
         </div>
       </Html>
@@ -137,10 +151,17 @@ export const QuantumNodeLayer: React.FC<{
   nodes?: QuantumNodeData[];
   globeRadius?: number;
   privacyMode?: 'cluster' | 'exact';
-}> = ({ nodes = quantumResearchNodes, globeRadius = 2.1, privacyMode = 'cluster' }) => (
+  onSelect?: (node: QuantumNodeData) => void;
+}> = ({ nodes = quantumResearchNodes, globeRadius = 2.1, privacyMode = 'cluster', onSelect }) => (
   <>
     {nodes.map((node) => (
-      <QuantumNode key={node.id} {...node} globeRadius={globeRadius} privacyMode={privacyMode} />
+      <QuantumNode
+        key={node.id}
+        {...node}
+        globeRadius={globeRadius}
+        privacyMode={privacyMode}
+        onSelect={onSelect}
+      />
     ))}
   </>
 );
