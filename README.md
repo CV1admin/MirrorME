@@ -14,10 +14,12 @@ A Vite + React application for the Civilisation.One / MirrorMe project.
 - Artifact table
 - Runtime settings page
 - GitHub Pages deployment workflow
+- MK-HIGE information-system engine prototype
 
 ## Documentation
 
 - `docs/MIRRORME_SYSTEM_INSTRUCTION.md` — canonical MirrorMe compact offline model instruction v1.5-beta.
+- `docs/MK_HIGE_INFORMATION_SYSTEM_ENGINE.md` — measurable information-system engine for coherence, entropy potential, resonance, and harmony.
 
 ## Local development
 
