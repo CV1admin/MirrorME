@@ -40,6 +40,10 @@ function loadModelConfig(): ModelConfig {
   }
 }
 
+function getBrowserGeminiApiKey(configuredKey?: string): string | undefined {
+  return configuredKey || import.meta.env.VITE_GEMINI_API_KEY;
+}
+
 function extractAuditFromText(fullText: string): AuditMetadata | undefined {
   const auditMatch = fullText.match(/AUDIT_BLOCK:\s*(\{[\s\S]*?\})/);
   if (!auditMatch) return undefined;
@@ -57,10 +61,10 @@ async function* streamWithGemini(
   systemInstruction: string,
   apiKey?: string
 ): AsyncGenerator<StreamResult> {
-  const resolvedKey = apiKey || process.env.API_KEY;
+  const resolvedKey = getBrowserGeminiApiKey(apiKey);
   if (!resolvedKey) {
     yield {
-      text: 'Gemini API key missing. Configure it in Settings or environment.',
+      text: 'Gemini API key missing. Configure it in Settings/local storage or set VITE_GEMINI_API_KEY in .env.local for local browser testing.',
       done: true,
     };
     return;
