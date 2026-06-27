@@ -18,6 +18,8 @@ A Vite + React application for the Civilisation.One / MirrorMe project.
 ## Documentation
 
 - `docs/MIRRORME_SYSTEM_INSTRUCTION.md` — canonical MirrorMe compact offline model instruction v1.5-beta.
+- `docs/protocols/CHATGPT_HANDSHAKE_PROTOCOL.md` — general user-to-AI session initialization, TCP alignment, parameter negotiation, and closure protocol.
+- `docs/protocols/GROK_HANDSHAKE_PROTOCOL.md` — Grok adapter admission gate for identity, capability, memory alignment, coherence, and trust scoring before active MirrorMe session opening.
 
 ## Local development
 
