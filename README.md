@@ -14,11 +14,36 @@ It provides a local-first interface for simulated telemetry, reasoning workflows
 - Cognitive Flight Recorder chat panel
 - Local/Ollama chat path for private local testing
 - Local MirrorME bridge on `http://localhost:8765`
+- Static SPA 404 redirect for direct `/mirrorme` page loads
 - Gemini browser test path when `VITE_GEMINI_API_KEY` is explicitly configured
 - GPT/OpenAI adapter boundary prepared for server-side integration
 - Contradiction Trap / logic audit panel
 - Civilisation.One dashboard layer
 - GitHub Pages deployment workflow
+
+---
+
+## Correct URLs
+
+Local development URL:
+
+```text
+http://localhost:3000/#/mirrorme
+```
+
+GitHub Pages URL:
+
+```text
+https://cv1admin.github.io/MirrorME/#/mirrorme
+```
+
+Do not use this direct path as the primary URL:
+
+```text
+https://cv1admin.github.io/MirrorME/mirrorme
+```
+
+The app uses hash routing. A static `public/404.html` redirect is included so accidental direct `/mirrorme` page loads can be redirected back to the hash route after deployment.
 
 ---
 
@@ -76,7 +101,7 @@ npm run dev
 Open:
 
 ```text
-http://localhost:3000
+http://localhost:3000/#/mirrorme
 ```
 
 ---
@@ -370,7 +395,7 @@ The workflow builds the Vite app and publishes the `dist` directory to GitHub Pa
 Expected public URL after Pages is enabled:
 
 ```text
-https://cv1admin.github.io/MirrorME/
+https://cv1admin.github.io/MirrorME/#/mirrorme
 ```
 
 In GitHub repository settings, set:
@@ -411,6 +436,7 @@ GPT role declaration:     active
 Live GPT/OpenAI adapter:  pending
 Local MirrorME bridge:    active
 Local/Ollama route:       active through localhost:8765
+Static 404 redirect:      active after deployment
 Persistent memory:        not included in static public deployment
 Verified telemetry:       not included in static public deployment
 ```
