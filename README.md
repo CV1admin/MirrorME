@@ -13,6 +13,7 @@ It provides a local-first interface for simulated telemetry, reasoning workflows
 - Vireax stability, drift, and error state handling
 - Cognitive Flight Recorder chat panel
 - Local/Ollama chat path for private local testing
+- Local MirrorME bridge on `http://localhost:8765`
 - Gemini browser test path when `VITE_GEMINI_API_KEY` is explicitly configured
 - GPT/OpenAI adapter boundary prepared for server-side integration
 - Contradiction Trap / logic audit panel
@@ -37,7 +38,8 @@ MirrorME UI
         |-- AdapterSpec
         |-- StaticAdapter                 # current mock adapter
         |-- future OpenAIAdapter           # GPT backend adapter
-        |-- future Local/Ollama adapter
+        |-- local MirrorME bridge          # localhost:8765
+        |-- Local/Ollama adapter           # localhost:11434 through bridge
         |-- audit ledger
         |-- policy gate
 ```
@@ -75,6 +77,70 @@ Open:
 
 ```text
 http://localhost:3000
+```
+
+---
+
+## Connect to local MirrorME
+
+The default local connection path is:
+
+```text
+MirrorME browser UI
+  -> http://localhost:8765/api/chat
+  -> local_bridge/mirrorme_bridge.py
+  -> http://localhost:11434/api/chat
+  -> Ollama local model
+```
+
+Start Ollama:
+
+```bash
+ollama serve
+```
+
+Pull a local model:
+
+```bash
+ollama pull llama3.1:8b
+```
+
+Start the MirrorME local bridge:
+
+```bash
+python local_bridge/mirrorme_bridge.py
+```
+
+Check bridge health:
+
+```bash
+curl http://localhost:8765/health
+```
+
+Start the UI:
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000/#/mirrorme
+```
+
+The chat service now defaults to the local bridge:
+
+```text
+provider: ollama
+endpoint: http://localhost:8765
+model: llama3.1:8b
+```
+
+Full guide:
+
+```text
+docs/LOCAL_MIRRORME_CONNECT.md
 ```
 
 ---
@@ -127,6 +193,7 @@ OPENAI_API_KEY=
 - `VITE_GEMINI_API_KEY` is browser-visible because Vite exposes variables prefixed with `VITE_`.
 - `VITE_GEMINI_API_KEY` is suitable only for local/demo browser testing.
 - `OPENAI_API_KEY` is server-only.
+- Local MirrorME/Ollama mode does not require a cloud API key.
 - Never expose `OPENAI_API_KEY` in Vite client code.
 - Never commit `.env`, `.env.local`, API keys, private tokens, or credentials.
 
@@ -330,6 +397,7 @@ Dashboard telemetry is generated client-side and must be treated as simulated un
 - Do not treat static adapter output as a real model response.
 - Declared metrics are hypotheses until connected to verified instrumentation.
 - GPT/OpenAI access must run through a backend or trusted local runtime only.
+- Local MirrorME bridge must stay bound to localhost unless explicitly secured.
 
 ---
 
@@ -341,7 +409,8 @@ VIREAX router:            active
 Static model adapters:    active
 GPT role declaration:     active
 Live GPT/OpenAI adapter:  pending
-Local/Ollama route:       planned / local testing path
+Local MirrorME bridge:    active
+Local/Ollama route:       active through localhost:8765
 Persistent memory:        not included in static public deployment
 Verified telemetry:       not included in static public deployment
 ```
