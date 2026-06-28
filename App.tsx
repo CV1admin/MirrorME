@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
@@ -140,10 +139,11 @@ const App: React.FC = () => {
     <HashRouter>
       <Layout simState={simState} toggleSimulation={toggleSimulation}>
         <Routes>
-          <Route path="/" element={<Navigate to="/mirrorme" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<CivilisationDashboard />} />
+          <Route path="/civilisation-dashboard" element={<CivilisationDashboard />} />
           <Route path="/mirrorme" element={<MirrorMe simState={simState} />} />
           <Route path="/thin-line-theory" element={<ThinLineTheory />} />
-          <Route path="/civilisation-dashboard" element={<CivilisationDashboard />} />
         </Routes>
       </Layout>
     </HashRouter>
