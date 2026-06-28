@@ -17,12 +17,14 @@ interface StreamResult {
 }
 
 const MODEL_CONFIG_KEY = 'mirrorme_model_config';
+const DEFAULT_LOCAL_BRIDGE_ENDPOINT = 'http://localhost:8765';
+const DEFAULT_LOCAL_MODEL = 'llama3.1:8b';
 
 function loadModelConfig(): ModelConfig {
   const defaults: ModelConfig = {
-    provider: 'gemini',
-    ollamaEndpoint: 'http://localhost:11434',
-    ollamaModel: 'llama3.1:8b',
+    provider: 'ollama',
+    ollamaEndpoint: DEFAULT_LOCAL_BRIDGE_ENDPOINT,
+    ollamaModel: DEFAULT_LOCAL_MODEL,
   };
 
   if (typeof window === 'undefined') return defaults;
@@ -122,7 +124,7 @@ async function* streamWithOllama(
 
   if (!response.ok || !response.body) {
     const detail = await response.text().catch(() => '');
-    throw new Error(`Ollama request failed (${response.status}). ${detail}`.trim());
+    throw new Error(`Local MirrorME/Ollama request failed (${response.status}). ${detail}`.trim());
   }
 
   const reader = response.body.getReader();
@@ -206,8 +208,8 @@ export async function* sendMessageStream(history: Message[], currentMetrics?: an
 
   try {
     if (config.provider === 'ollama') {
-      const endpoint = config.ollamaEndpoint || 'http://localhost:11434';
-      const model = config.ollamaModel || 'llama3.1:8b';
+      const endpoint = config.ollamaEndpoint || DEFAULT_LOCAL_BRIDGE_ENDPOINT;
+      const model = config.ollamaModel || DEFAULT_LOCAL_MODEL;
       for await (const chunk of streamWithOllama(history, systemInstruction, endpoint, model)) {
         yield chunk;
       }
@@ -220,7 +222,7 @@ export async function* sendMessageStream(history: Message[], currentMetrics?: an
   } catch (error) {
     console.error('Model stream error:', error);
     yield {
-      text: 'Audit stream interrupted. Verify provider config and model endpoint.',
+      text: 'Audit stream interrupted. Verify local bridge/Ollama is running at http://localhost:8765, or switch provider config in localStorage.',
       done: true,
     };
   }
