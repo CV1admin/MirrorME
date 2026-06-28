@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>MirrorME redirect</title>
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        var search = window.location.search || "";
+        var hash = window.location.hash || "";
+
+        if (hash) {
+          window.location.replace(window.location.href.replace("404.html", ""));
+          return;
+        }
+
+        var repoBase = "/MirrorME";
+        var route = path;
+        var base = "";
+
+        if (path === repoBase || path.indexOf(repoBase + "/") === 0) {
+          base = repoBase + "/";
+          route = path.slice(repoBase.length) || "/";
+        } else {
+          base = "/";
+        }
+
+        if (route === "/" || route === "") {
+          route = "/mirrorme";
+        }
+
+        window.location.replace(base + "#" + route + search);
+      })();
+    </script>
+  </head>
+  <body>
+    <p>Redirecting to MirrorME...</p>
+  </body>
+</html>
