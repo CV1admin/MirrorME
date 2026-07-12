@@ -17,6 +17,7 @@ It provides a local-first interface for simulated telemetry, reasoning workflows
 - Static SPA 404 redirect for direct `/mirrorme` page loads
 - Gemini browser test path when `VITE_GEMINI_API_KEY` is explicitly configured
 - GPT/OpenAI adapter boundary prepared for server-side integration
+- xAI/Grok server-side critic adapter for QNIP review
 - Contradiction Trap / logic audit panel
 - Civilisation.One dashboard layer
 - GitHub Pages deployment workflow
@@ -61,7 +62,8 @@ MirrorME UI
         |
         |-- ModelRouter
         |-- AdapterSpec
-        |-- StaticAdapter                 # current mock adapter
+        |-- StaticAdapter                 # simulation/fallback adapter
+        |-- XAIAdapter                    # live server-side Grok critic
         |-- future OpenAIAdapter           # GPT backend adapter
         |-- local MirrorME bridge          # localhost:8765
         |-- Local/Ollama adapter           # localhost:11434 through bridge
@@ -69,7 +71,7 @@ MirrorME UI
         |-- policy gate
 ```
 
-The current repository already declares GPT as an OpenAI-backed model role inside the VIREAX/QVIREAX path, but the active adapter is still static/mock unless a real backend adapter is added.
+The current repository declares GPT as an OpenAI-backed model role inside the VIREAX/QVIREAX path, but the active GPT adapter is still static/mock unless a real backend adapter is added. Grok can use the live xAI Responses API when `XAI_API_KEY` is configured server-side.
 
 Current role map:
 
@@ -170,6 +172,46 @@ docs/LOCAL_MIRRORME_CONNECT.md
 
 ---
 
+## xAI / Grok QNIP integration
+
+The live Grok adapter is server-side Python code. It must not be placed in the Vite browser bundle.
+
+PowerShell configuration for the current terminal:
+
+```powershell
+$env:XAI_API_KEY = "PASTE_YOUR_KEY_LOCALLY"
+$env:XAI_MODEL = "grok-4.5"
+python -m qviraex
+```
+
+Expected mode:
+
+```text
+xAI Grok adapter: LIVE_XAI_API
+```
+
+Without `XAI_API_KEY`, Grok remains explicitly marked as:
+
+```text
+xAI Grok adapter: STATIC_SIMULATION
+```
+
+Installation and security guide:
+
+```text
+docs/XAI_QNIP_INSTALL.md
+```
+
+Quantum-network integration specification:
+
+```text
+docs/QUANTUM_NETWORK_INTEGRATION_PROTOCOL.md
+```
+
+Grok acts only as an advisory critic. It cannot authorize QNIP sessions, control quantum hardware, verify Bell pairs, or turn simulated telemetry into physical evidence.
+
+---
+
 ## Checks and production build
 
 Run type checks:
@@ -196,6 +238,12 @@ Preview production build:
 npm run preview
 ```
 
+Run Python tests:
+
+```bash
+python -m unittest discover -s qviraex/vireax/tests -p "test_*.py" -v
+```
+
 ---
 
 ## Environment setup
@@ -211,6 +259,9 @@ Environment variables:
 ```text
 VITE_GEMINI_API_KEY=
 OPENAI_API_KEY=
+XAI_API_KEY=
+XAI_MODEL=grok-4.5
+XAI_BASE_URL=https://api.x.ai/v1
 ```
 
 ### Security boundary
@@ -218,8 +269,9 @@ OPENAI_API_KEY=
 - `VITE_GEMINI_API_KEY` is browser-visible because Vite exposes variables prefixed with `VITE_`.
 - `VITE_GEMINI_API_KEY` is suitable only for local/demo browser testing.
 - `OPENAI_API_KEY` is server-only.
+- `XAI_API_KEY` is server-only and must never use a `VITE_` prefix.
 - Local MirrorME/Ollama mode does not require a cloud API key.
-- Never expose `OPENAI_API_KEY` in Vite client code.
+- Never expose server API keys in Vite client code.
 - Never commit `.env`, `.env.local`, API keys, private tokens, or credentials.
 
 ---
@@ -234,209 +286,13 @@ GPT is already registered conceptually in the QVIREAX runner:
 AdapterSpec(model="GPT", provider="OpenAI", role="architect")
 ```
 
-At the moment, the active response path uses `StaticAdapter`, so GPT is not yet making a live OpenAI API call.
+At the moment, the active GPT response path uses `StaticAdapter`, so GPT is not yet making a live OpenAI API call.
 
 Current behavior:
 
 ```text
-input task -> ModelRouter -> StaticAdapter -> mock AdapterResult
-```
-
-Target behavior:
-
-```text
-input task -> ModelRouter -> OpenAIAdapter -> OpenAI API -> AdapterResult
-```
-
-### Required backend adapter
-
-Create a server/local-only adapter such as:
-
-```text
-qviraex/vireax/openai_adapter.py
-```
-
-The adapter should:
-
-- read `OPENAI_API_KEY` from the server/local environment
-- never expose the key to browser code
-- accept an `AdapterEnvelope`
-- send the prompt and role metadata to OpenAI
-- return a normal `AdapterResult`
-- log model, provider, role, and audit metadata
-- never log secrets
-
-Recommended adapter shape:
-
-```python
-from __future__ import annotations
-
-import os
-
-from openai import OpenAI
-
-from .adapters import AdapterEnvelope, AdapterResult, AdapterSpec
-
-
-class OpenAIAdapter:
-    def __init__(self, spec: AdapterSpec, model_name: str = "gpt-4.1-mini") -> None:
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if not api_key:
-            raise RuntimeError("OPENAI_API_KEY is not configured")
-
-        self.spec = spec
-        self.model_name = model_name
-        self.client = OpenAI(api_key=api_key)
-
-    def respond(self, envelope: AdapterEnvelope) -> AdapterResult:
-        system_message = (
-            "You are the GPT architect model inside the MirrorME/VIREAX reasoning stack. "
-            "Separate facts, assumptions, hypotheses, and implementation steps. "
-            "Do not fabricate sources or claim unsupported tool access."
-        )
-
-        response = self.client.responses.create(
-            model=self.model_name,
-            input=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": envelope.prompt},
-            ],
-        )
-
-        output = response.output_text
-
-        return AdapterResult(
-            model=self.spec.model,
-            provider=self.spec.provider,
-            role=envelope.role,
-            output=output,
-            confidence=0.80,
-            metadata={
-                "backend_model": self.model_name,
-                "session_id": envelope.metadata.get("session_id"),
-                "operator": envelope.metadata.get("operator"),
-            },
-        )
-```
-
-Then replace the static GPT adapter registration with the real adapter only in a trusted backend/local runtime.
-
-Example:
-
-```python
-from qviraex.vireax.adapters import AdapterSpec, StaticAdapter
-from qviraex.vireax.openai_adapter import OpenAIAdapter
-
-router.register(
-    OpenAIAdapter(
-        AdapterSpec(model="GPT", provider="OpenAI", role="architect")
-    )
-)
-
-router.register(
-    StaticAdapter(AdapterSpec(model="Claude", provider="Anthropic", role="safety_reviewer"))
-)
-router.register(
-    StaticAdapter(AdapterSpec(model="Llama", provider="Meta", role="local_fallback"))
-)
-```
-
----
-
-## Local/Ollama path
-
-For private local testing, keep the local model route separate from cloud GPT.
-
-Recommended routing:
-
-```text
-GPT/OpenAI      -> backend only, API key required
-Llama/Ollama    -> local fallback, no cloud dependency
-Gemini browser  -> demo/local browser path only
-StaticAdapter   -> tests, smoke checks, offline mock runs
-```
-
-This separation prevents accidental secret exposure and keeps MirrorME operational when cloud models are unavailable.
-
----
-
-## Running QVIREAX demo
-
-If the Python package path is configured, run:
-
-```bash
-python -m qviraex
-```
-
-Expected current behavior:
-
-```text
-QVIREAX online
-MRQL ritual: demo v0.1
-VIREAX state: FINAL_OUTPUT
-Next action: COMMIT_AUDIT
-Audit hash: sha256:...
-```
-
-Because the current adapter is static, this validates routing and audit flow, not live GPT reasoning.
-
----
-
-## GitHub Pages deployment
-
-The repository includes:
-
-```text
-.github/workflows/deploy-pages.yml
-```
-
-The workflow builds the Vite app and publishes the `dist` directory to GitHub Pages on every push to `main`.
-
-Expected public URL after Pages is enabled:
-
-```text
-https://cv1admin.github.io/MirrorME/#/mirrorme
-```
-
-In GitHub repository settings, set:
-
-```text
-Settings -> Pages -> Source -> GitHub Actions
-```
-
----
-
-## Runtime note
-
-This public deployment is static. It does not include a backend database, persistent private memory, or verified hardware telemetry.
-
-Dashboard telemetry is generated client-side and must be treated as simulated unless connected to verified instrumentation.
-
----
-
-## Safety boundary
-
-- Do not paste secrets into chat.
-- Do not commit `.env`, `.env.local`, `node_modules`, `.next`, `dist`, or `build`.
-- Do not treat simulated telemetry as biological or hardware measurement.
-- Do not treat static adapter output as a real model response.
-- Declared metrics are hypotheses until connected to verified instrumentation.
-- GPT/OpenAI access must run through a backend or trusted local runtime only.
-- Local MirrorME bridge must stay bound to localhost unless explicitly secured.
-
----
-
-## Project status
-
-```text
-MirrorME UI:              active
-VIREAX router:            active
-Static model adapters:    active
-GPT role declaration:     active
-Live GPT/OpenAI adapter:  pending
-Local MirrorME bridge:    active
-Local/Ollama route:       active through localhost:8765
-Static 404 redirect:      active after deployment
-Persistent memory:        not included in static public deployment
-Verified telemetry:       not included in static public deployment
+GPT role declaration
+    -> ModelRouter
+    -> StaticAdapter
+    -> deterministic mock response
 ```
