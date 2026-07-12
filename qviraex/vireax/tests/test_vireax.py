@@ -39,6 +39,10 @@ class VIREAXSmokeTest(unittest.TestCase):
         self.assertEqual(result.next_action, "COMMIT_AUDIT")
         self.assertTrue(result.audit_hash.startswith("sha256:"))
         self.assertGreater(result.evidence_level, 0)
+        self.assertTrue(result.responses)
+        self.assertTrue(
+            all(response["metadata"]["adapter_mode"] == "STATIC_SIMULATION" for response in result.responses)
+        )
 
 
 if __name__ == "__main__":
