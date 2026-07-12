@@ -247,6 +247,20 @@ python -m qviraex
 
 ---
 
+## Current repository status
+
+```text
+XAIAdapter implementation:     added
+QVIREAX Grok registration:     added
+Explicit live/static mode:     added
+Server-only environment keys:  documented
+Mock HTTP adapter tests:       added and locally validated
+Physical quantum hardware:     not installed
+QNIP coordinator sidecar:      not implemented
+```
+
+---
+
 ## Official API references
 
 - xAI documentation: `https://docs.x.ai/`
