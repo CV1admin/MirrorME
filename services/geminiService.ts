@@ -18,7 +18,35 @@ interface StreamResult {
 
 const MODEL_CONFIG_KEY = 'mirrorme_model_config';
 const DEFAULT_LOCAL_BRIDGE_ENDPOINT = 'http://localhost:8765';
-const DEFAULT_LOCAL_MODEL = 'llama3.1:8b';
+const DEFAULT_LOCAL_MODEL = 'mirrorme';
+
+function normalizeStoredConfig(parsed: Partial<ModelConfig>): ModelConfig {
+  const defaults: ModelConfig = {
+    provider: 'ollama',
+    ollamaEndpoint: DEFAULT_LOCAL_BRIDGE_ENDPOINT,
+    ollamaModel: DEFAULT_LOCAL_MODEL,
+  };
+
+  const legacyDefault =
+    parsed.provider === 'gemini' &&
+    !parsed.geminiApiKey &&
+    (!parsed.ollamaEndpoint || parsed.ollamaEndpoint === 'http://localhost:11434') &&
+    (!parsed.ollamaModel || parsed.ollamaModel === 'llama3.1:8b');
+
+  if (legacyDefault) return defaults;
+
+  const merged: ModelConfig = { ...defaults, ...parsed };
+
+  if (
+    merged.provider === 'ollama' &&
+    merged.ollamaEndpoint === 'http://localhost:11434' &&
+    merged.ollamaModel === 'llama3.1:8b'
+  ) {
+    return defaults;
+  }
+
+  return merged;
+}
 
 function loadModelConfig(): ModelConfig {
   const defaults: ModelConfig = {
@@ -33,11 +61,15 @@ function loadModelConfig(): ModelConfig {
     const raw = window.localStorage.getItem(MODEL_CONFIG_KEY);
     if (!raw) return defaults;
     const parsed = JSON.parse(raw) as Partial<ModelConfig>;
-    return {
-      ...defaults,
-      ...parsed,
-    };
+    const normalized = normalizeStoredConfig(parsed);
+
+    if (JSON.stringify(normalized) !== JSON.stringify(parsed)) {
+      window.localStorage.setItem(MODEL_CONFIG_KEY, JSON.stringify(normalized));
+    }
+
+    return normalized;
   } catch {
+    window.localStorage.removeItem(MODEL_CONFIG_KEY);
     return defaults;
   }
 }
@@ -104,7 +136,8 @@ async function* streamWithOllama(
   endpoint: string,
   model: string
 ): AsyncGenerator<StreamResult> {
-  const response = await fetch(`${endpoint.replace(/\/$/, '')}/api/chat`, {
+  const normalizedEndpoint = endpoint.replace(/\/$/, '');
+  const response = await fetch(`${normalizedEndpoint}/api/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -124,7 +157,9 @@ async function* streamWithOllama(
 
   if (!response.ok || !response.body) {
     const detail = await response.text().catch(() => '');
-    throw new Error(`Local MirrorME/Ollama request failed (${response.status}). ${detail}`.trim());
+    throw new Error(
+      `Local MirrorME request failed (${response.status}) for model "${model}" at ${normalizedEndpoint}. ${detail}`.trim()
+    );
   }
 
   const reader = response.body.getReader();
@@ -153,8 +188,21 @@ async function* streamWithOllama(
           yield { text: token, done: false };
         }
       } catch {
-        // Ignore malformed partial lines and continue consuming stream.
+        // Ignore malformed partial lines and continue consuming the stream.
       }
+    }
+  }
+
+  if (buffer.trim()) {
+    try {
+      const parsed = JSON.parse(buffer) as { message?: { content?: string } };
+      const token = parsed.message?.content || '';
+      if (token) {
+        fullAccumulated += token;
+        yield { text: token, done: false };
+      }
+    } catch {
+      // A trailing malformed fragment is non-fatal after the streamed response ends.
     }
   }
 
@@ -221,8 +269,11 @@ export async function* sendMessageStream(history: Message[], currentMetrics?: an
     }
   } catch (error) {
     console.error('Model stream error:', error);
+    const endpoint = config.ollamaEndpoint || DEFAULT_LOCAL_BRIDGE_ENDPOINT;
+    const model = config.ollamaModel || DEFAULT_LOCAL_MODEL;
+    const detail = error instanceof Error ? error.message : String(error);
     yield {
-      text: 'Audit stream interrupted. Verify local bridge/Ollama is running at http://localhost:8765, or switch provider config in localStorage.',
+      text: `MirrorME stream interrupted. Expected local route: ${endpoint} using model "${model}". Start Ollama, confirm \`ollama list\` contains \`${model}\`, then run \`python local_bridge/mirrorme_bridge.py --model ${model}\`. ${detail}`,
       done: true,
     };
   }
