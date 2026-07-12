@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 
 type Provider = 'gemini' | 'ollama';
@@ -13,10 +12,32 @@ interface ModelConfig {
 const MODEL_CONFIG_KEY = 'mirrorme_model_config';
 
 const DEFAULT_CONFIG: ModelConfig = {
-  provider: 'gemini',
+  provider: 'ollama',
   geminiApiKey: '',
-  ollamaEndpoint: 'http://localhost:11434',
-  ollamaModel: 'llama3.1:8b',
+  ollamaEndpoint: 'http://localhost:8765',
+  ollamaModel: 'mirrorme',
+};
+
+const normalizeStoredConfig = (parsed: Partial<ModelConfig>): ModelConfig => {
+  const legacyDefault =
+    parsed.provider === 'gemini' &&
+    !parsed.geminiApiKey &&
+    (!parsed.ollamaEndpoint || parsed.ollamaEndpoint === 'http://localhost:11434') &&
+    (!parsed.ollamaModel || parsed.ollamaModel === 'llama3.1:8b');
+
+  if (legacyDefault) return DEFAULT_CONFIG;
+
+  const merged: ModelConfig = { ...DEFAULT_CONFIG, ...parsed };
+
+  if (
+    merged.provider === 'ollama' &&
+    merged.ollamaEndpoint === 'http://localhost:11434' &&
+    merged.ollamaModel === 'llama3.1:8b'
+  ) {
+    return DEFAULT_CONFIG;
+  }
+
+  return merged;
 };
 
 const Settings: React.FC = () => {
@@ -28,9 +49,15 @@ const Settings: React.FC = () => {
       const raw = window.localStorage.getItem(MODEL_CONFIG_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw) as Partial<ModelConfig>;
-      setConfig(prev => ({ ...prev, ...parsed }));
+      const normalized = normalizeStoredConfig(parsed);
+      setConfig(normalized);
+
+      if (JSON.stringify(normalized) !== JSON.stringify(parsed)) {
+        window.localStorage.setItem(MODEL_CONFIG_KEY, JSON.stringify(normalized));
+      }
     } catch {
-      // Keep defaults when local storage payload is invalid.
+      window.localStorage.removeItem(MODEL_CONFIG_KEY);
+      setConfig(DEFAULT_CONFIG);
     }
   }, []);
 
@@ -39,10 +66,16 @@ const Settings: React.FC = () => {
     setSavedAt(new Date().toLocaleTimeString());
   };
 
+  const useLocalDefaults = () => {
+    setConfig(DEFAULT_CONFIG);
+    window.localStorage.setItem(MODEL_CONFIG_KEY, JSON.stringify(DEFAULT_CONFIG));
+    setSavedAt(new Date().toLocaleTimeString());
+  };
+
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <h2 className="text-3xl font-bold text-slate-100 mb-2">Engine Configuration</h2>
-      <p className="text-slate-400 mb-8">Adjust the MKone brain simulator parameters and system truth-layers.</p>
+      <p className="text-slate-400 mb-8">Configure the local MirrorME runtime and simulation parameters.</p>
 
       <div className="space-y-6">
         <section className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
@@ -56,8 +89,8 @@ const Settings: React.FC = () => {
                 onChange={(e) => setConfig(prev => ({ ...prev, provider: e.target.value as Provider }))}
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500"
               >
+                <option value="ollama">Ollama (Local, no API charge)</option>
                 <option value="gemini">Gemini (Cloud)</option>
-                <option value="ollama">Ollama (Local)</option>
               </select>
             </div>
 
@@ -77,12 +110,12 @@ const Settings: React.FC = () => {
             {config.provider === 'ollama' && (
               <>
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-400">Ollama Endpoint</label>
+                  <label className="text-xs font-medium text-slate-400">MirrorME Bridge Endpoint</label>
                   <input
                     type="text"
                     value={config.ollamaEndpoint}
                     onChange={(e) => setConfig(prev => ({ ...prev, ollamaEndpoint: e.target.value }))}
-                    placeholder="http://localhost:11434"
+                    placeholder="http://localhost:8765"
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500"
                   />
                 </div>
@@ -92,7 +125,7 @@ const Settings: React.FC = () => {
                     type="text"
                     value={config.ollamaModel}
                     onChange={(e) => setConfig(prev => ({ ...prev, ollamaModel: e.target.value }))}
-                    placeholder="llama3.1:8b"
+                    placeholder="mirrorme"
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500"
                   />
                 </div>
@@ -100,18 +133,26 @@ const Settings: React.FC = () => {
             )}
           </div>
 
-          <div className="mt-5 flex items-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center gap-3">
             <button
+              type="button"
               onClick={saveConfig}
               className="px-4 py-2 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-lg text-xs font-bold hover:bg-cyan-500/20 transition-all uppercase"
             >
               Save Model Config
             </button>
+            <button
+              type="button"
+              onClick={useLocalDefaults}
+              className="px-4 py-2 border border-slate-700 rounded-lg text-xs font-bold text-slate-300 hover:bg-slate-800 transition-all uppercase"
+            >
+              Use Local MirrorME Defaults
+            </button>
             {savedAt && <span className="text-[11px] text-slate-500">Saved at {savedAt}</span>}
           </div>
 
           <p className="text-xs text-slate-500 mt-4">
-            Local mode uses Ollama chat API and runs entirely on your machine.
+            Default route: browser UI → localhost:8765 bridge → localhost:11434 Ollama → mirrorme.
           </p>
         </section>
 
@@ -137,28 +178,28 @@ const Settings: React.FC = () => {
           <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Storage Layer</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-800">
-               <div className="flex items-center gap-4">
-                 <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 1.105 2.239 2 5 2s5-.895 5-2V7M4 7c0 1.105 2.239 2 5 2s5-.895 5-2M4 7c0-1.105 2.239-2 5-2s5 .895 5 2m0 5c0 1.105-2.239 2-5 2s-5-.895-5-2" /></svg>
-                 </div>
-                 <div>
-                   <h4 className="text-sm font-bold text-slate-200">Postgres Connector</h4>
-                   <p className="text-xs text-slate-500">Truth-layer for relational cognitive artifacts.</p>
-                 </div>
-               </div>
-               <span className="px-2 py-1 bg-green-500/10 text-green-500 text-[10px] font-bold rounded border border-green-500/20">CONNECTED</span>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 1.105 2.239 2 5 2s5-.895 5-2V7M4 7c0 1.105 2.239 2 5 2s5-.895 5-2M4 7c0-1.105 2.239-2 5-2s5 .895 5 2m0 5c0 1.105-2.239 2-5 2s-5-.895-5-2" /></svg>
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-200">Postgres Connector</h4>
+                  <p className="text-xs text-slate-500">Truth-layer for relational cognitive artifacts.</p>
+                </div>
+              </div>
+              <span className="px-2 py-1 bg-green-500/10 text-green-500 text-[10px] font-bold rounded border border-green-500/20">CONNECTED</span>
             </div>
             <div className="flex items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-800 opacity-60">
-               <div className="flex items-center gap-4">
-                 <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
-                 </div>
-                 <div>
-                   <h4 className="text-sm font-bold text-slate-200">S3 / MinIO Object Store</h4>
-                   <p className="text-xs text-slate-500">Blob storage for frame arrays and videos.</p>
-                 </div>
-               </div>
-               <span className="px-2 py-1 bg-slate-800 text-slate-500 text-[10px] font-bold rounded border border-slate-700 uppercase">Disabled</span>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-200">S3 / MinIO Object Store</h4>
+                  <p className="text-xs text-slate-500">Blob storage for frame arrays and videos.</p>
+                </div>
+              </div>
+              <span className="px-2 py-1 bg-slate-800 text-slate-500 text-[10px] font-bold rounded border border-slate-700 uppercase">Disabled</span>
             </div>
           </div>
         </section>
@@ -167,12 +208,12 @@ const Settings: React.FC = () => {
           <h3 className="text-sm font-bold text-red-400 uppercase tracking-widest mb-4">Danger Zone</h3>
           <p className="text-xs text-slate-500 mb-4">These actions are irreversible and will wipe truth-layer data.</p>
           <div className="flex gap-4">
-             <button className="px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-lg text-xs font-bold hover:bg-red-500/20 transition-all uppercase">
-               Purge Simulation Cache
-             </button>
-             <button className="px-4 py-2 border border-slate-700 rounded-lg text-xs font-bold text-slate-400 hover:bg-slate-800 transition-all uppercase">
-               Reset Workspace
-             </button>
+            <button className="px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-lg text-xs font-bold hover:bg-red-500/20 transition-all uppercase">
+              Purge Simulation Cache
+            </button>
+            <button className="px-4 py-2 border border-slate-700 rounded-lg text-xs font-bold text-slate-400 hover:bg-slate-800 transition-all uppercase">
+              Reset Workspace
+            </button>
           </div>
         </section>
       </div>
