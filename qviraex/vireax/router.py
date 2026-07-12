@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .adapters import AdapterEnvelope, AdapterResult, StaticAdapter
+from .adapters import Adapter, AdapterEnvelope, AdapterResult
 
 
 @dataclass
 class ModelRouter:
-    registry: dict[str, StaticAdapter] = field(default_factory=dict)
+    registry: dict[str, Adapter] = field(default_factory=dict)
 
-    def register(self, adapter: StaticAdapter) -> None:
+    def register(self, adapter: Adapter) -> None:
         self.registry[adapter.spec.model] = adapter
 
     def dispatch(self, target_model: str, envelope: AdapterEnvelope) -> AdapterResult:
