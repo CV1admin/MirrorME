@@ -229,6 +229,29 @@ HYBRID
 
 The adapter MUST expose capability metadata and MUST NOT silently substitute simulated results for failed hardware operations.
 
+### 5.7 External AI advisory adapters
+
+External AI providers, including the xAI/Grok critic adapter, operate only in the governance and analysis boundary.
+
+They MAY:
+
+- critique topology and routing assumptions
+- identify contradictions
+- propose failure-injection tests
+- review fidelity models and audit summaries
+- compare simulated claims with hardware-reported evidence labels
+
+They MUST NOT:
+
+- directly authorize a quantum-network session
+- send controller or pulse-level hardware commands
+- create, consume, release, or verify a Bell pair
+- access raw QKD key material
+- convert `SIMULATED` or `HARDWARE_REPORTED` data into `HARDWARE_VERIFIED`
+- bypass deterministic policy, authentication, evidence, or human-approval gates
+
+Every external AI result MUST be labelled with its provider, model, adapter mode, response identifier when available, and whether remote storage was requested.
+
 ---
 
 ## 6. Identity and trust model
@@ -872,6 +895,8 @@ Failures MUST include whether retry is safe:
 - Quantum resources MUST NOT be described as transmitting ordinary messages faster than light.
 - A simulated result MUST remain marked simulated throughout its lifecycle and audit trail.
 - AI-generated recommendations MAY assist scheduling but MUST NOT bypass deterministic safety and policy gates.
+- External AI API keys MUST remain server-side and MUST NOT be exposed through Vite/browser variables.
+- Raw QKD keys, private keys, seed phrases, passwords, and unrestricted detector data MUST NOT be submitted to an external AI provider.
 
 ---
 
@@ -897,6 +922,9 @@ A QNIP-ME implementation SHOULD pass at least these tests:
 16. Reject a swap when input pair references are missing or consumed.
 17. Mark verification incomplete when evidence is missing.
 18. Complete a simulator end-to-end lifecycle through `CONSUMED`.
+19. Prevent an external AI response from changing a Bell-pair lifecycle state directly.
+20. Preserve explicit `LIVE_XAI_API` or `STATIC_SIMULATION` adapter mode in every Grok result.
+21. Confirm external AI requests do not contain raw key material.
 
 ---
 
@@ -923,6 +951,7 @@ Timing adapter
 Controller API
 Conformance tests
 Failure injection
+External AI advisory adapter with explicit non-authority boundary
 ```
 
 ### Phase 2 — Single laboratory link
@@ -965,6 +994,7 @@ Operational security review
 Protocol document:                 implemented
 MirrorME local handshake:          implemented separately
 Local chat bridge:                 implemented separately
+xAI/Grok advisory adapter:         implemented on integration branch
 QNIP coordinator sidecar:          not implemented
 Quantum service API:               not implemented
 Topology registry:                 not implemented
@@ -980,8 +1010,10 @@ Independent quantum verification:  not implemented
 
 - RFC 9340, *Architectural Principles for a Quantum Internet*, IRTF Quantum Internet Research Group, March 2023. This is an informational architectural reference, not an Internet Standards Track protocol.
 - CERN White Rabbit Project documentation and IEEE 1588 timing references.
+- xAI API documentation for the Responses API.
 - MirrorME Local Handshake Protocol, `docs/LOCAL_HANDSHAKE_PROTOCOL.md`.
 - MirrorME local bridge, `local_bridge/mirrorme_bridge.py`.
+- xAI QNIP installation guide, `docs/XAI_QNIP_INSTALL.md`.
 
 ---
 
@@ -995,6 +1027,9 @@ QNIP-ME is its integration protocol between MirrorME, governance,
 classical controllers, node runtimes, and simulated or physical
 quantum resources.
 
-It coordinates quantum resources; it does not claim to create new
+External AI models may critique and advise, but they possess no direct
+quantum-resource authority.
+
+QNIP-ME coordinates quantum resources; it does not claim to create new
 physics, replace hardware, or prove quantum events without evidence.
 ```
