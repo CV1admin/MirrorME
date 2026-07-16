@@ -440,3 +440,24 @@ Static 404 redirect:      active after deployment
 Persistent memory:        not included in static public deployment
 Verified telemetry:       not included in static public deployment
 ```
+
+
+---
+
+## Civilisation.One / MKone routing boundary
+
+MirrorME is the member-facing application layer. It must not call the private MKone scientific engine directly.
+
+```text
+MirrorME client
+  -> authenticated Civilisation.One Global Intelligence Router
+  -> policy, consent, provenance and audit gates
+  -> private MKone scientific engine
+  -> validation report
+  -> Marek Kowalski manual review
+  -> optional publication
+```
+
+Scientific claims use the MKdataONE status classes: established `[E]`, conditional `[C]`, definition `[D]`, phenomenological `[P]`, hypothesis `[H]`, and deprecated `[X]`. Automated processing cannot promote an `[H]` or `[P]` claim to `[E]`.
+
+See `docs/SYSTEM_REWIRE.md` for the trust boundaries, request envelope, and publication state machine.
