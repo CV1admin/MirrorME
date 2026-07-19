@@ -124,11 +124,14 @@ Start Ollama:
 ollama serve
 ```
 
-Pull a local model:
+Build the canonical MirrorME persona on Qwen 3:
 
 ```bash
-ollama pull mirrorme
+ollama pull qwen3:8b
+ollama create mirrorme -f ollama/Modelfile
 ```
+
+The Modelfile embeds the MirrorME manifesto as canonical persona identity. Its epistemic discipline still distinguishes internal framework axioms from externally established empirical claims.
 
 Start the MirrorME local bridge directly:
 
