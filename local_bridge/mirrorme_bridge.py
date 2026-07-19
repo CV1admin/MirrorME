@@ -40,7 +40,14 @@ DEFAULT_MODEL = "llama3.1:8b"
 DEFAULT_OPERATOR = "Marek K"
 HANDSHAKE_TTL_SECONDS = 300
 HANDSHAKE_CONFIRMATION_PHRASE = "CONFIRM_LOCAL_MIRRORME"
-HANDSHAKE_PROTOCOL_VERSION = "MirrorME-Local-Handshake/v0.1"
+HANDSHAKE_PROTOCOL_VERSION = "MirrorME-Local-Handshake/v0.2"
+MAX_REQUEST_BYTES = 1_048_576
+DEFAULT_ALLOWED_ORIGINS = {
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+}
 
 
 def _json_bytes(payload: dict[str, Any]) -> bytes:
@@ -51,6 +58,8 @@ def _read_json(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
     length = int(handler.headers.get("Content-Length", "0") or "0")
     if length <= 0:
         return {}
+    if length > MAX_REQUEST_BYTES:
+        raise ValueError("request_body_too_large")
     raw = handler.rfile.read(length)
     if not raw:
         return {}
@@ -75,10 +84,17 @@ def _now_seconds() -> int:
 class MirrorMeBridgeHandler(BaseHTTPRequestHandler):
     server_version = "MirrorMeLocalBridge/0.2"
 
+    def _request_origin_allowed(self) -> bool:
+        origin = self.headers.get("Origin")
+        return origin is None or origin in self.server.allowed_origins  # type: ignore[attr-defined]
+
     def _cors_headers(self) -> None:
-        self.send_header("Access-Control-Allow-Origin", "*")
+        origin = self.headers.get("Origin")
+        if origin and origin in self.server.allowed_origins:  # type: ignore[attr-defined]
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type,Authorization")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.send_header("Cache-Control", "no-store")
 
     def _send_json(self, status: int, payload: dict[str, Any]) -> None:
@@ -91,11 +107,17 @@ class MirrorMeBridgeHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_OPTIONS(self) -> None:  # noqa: N802 - required by BaseHTTPRequestHandler
+        if not self._request_origin_allowed():
+            self._send_json(403, {"ok": False, "error": "origin_not_allowed"})
+            return
         self.send_response(204)
         self._cors_headers()
         self.end_headers()
 
     def do_GET(self) -> None:  # noqa: N802 - required by BaseHTTPRequestHandler
+        if not self._request_origin_allowed():
+            self._send_json(403, {"ok": False, "error": "origin_not_allowed"})
+            return
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path.rstrip("/")
 
@@ -127,6 +149,9 @@ class MirrorMeBridgeHandler(BaseHTTPRequestHandler):
         self._send_json(404, {"ok": False, "error": "not_found"})
 
     def do_POST(self) -> None:  # noqa: N802 - required by BaseHTTPRequestHandler
+        if not self._request_origin_allowed():
+            self._send_json(403, {"ok": False, "error": "origin_not_allowed"})
+            return
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path.rstrip("/")
 
@@ -144,6 +169,8 @@ class MirrorMeBridgeHandler(BaseHTTPRequestHandler):
             self._send_json(404, {"ok": False, "error": "not_found"})
         except json.JSONDecodeError:
             self._send_json(400, {"ok": False, "error": "invalid_json"})
+        except ValueError as exc:
+            self._send_json(413, {"ok": False, "error": str(exc)})
         except urllib.error.URLError as exc:
             self._send_json(
                 502,
@@ -172,7 +199,7 @@ class MirrorMeBridgeHandler(BaseHTTPRequestHandler):
             "expires_at_unix": expires_at,
             "state": "CHALLENGE_ISSUED",
             "operator": None,
-            "trust_score": 0.0,
+            "readiness_score": 0.0,
         }
 
         self._send_json(
@@ -231,11 +258,11 @@ class MirrorMeBridgeHandler(BaseHTTPRequestHandler):
         bridge_local = _is_local_address(self.server.server_address[0])  # type: ignore[attr-defined]
         ollama_local = _is_local_address(self.server.ollama_url)  # type: ignore[attr-defined]
 
-        trust_score = 0.40
-        trust_score += 0.20 if operator_match else 0.0
-        trust_score += 0.20 if bridge_local else 0.0
-        trust_score += 0.20 if ollama_local else 0.0
-        trust_score = round(min(trust_score, 1.0), 3)
+        readiness_score = 0.40
+        readiness_score += 0.20 if operator_match else 0.0
+        readiness_score += 0.20 if bridge_local else 0.0
+        readiness_score += 0.20 if ollama_local else 0.0
+        readiness_score = round(min(readiness_score, 1.0), 3)
 
         warnings: list[str] = []
         if not operator_match:
@@ -250,7 +277,7 @@ class MirrorMeBridgeHandler(BaseHTTPRequestHandler):
                 "state": "VERIFIED_LOCAL_SESSION",
                 "operator": operator,
                 "verified_at_unix": _now_seconds(),
-                "trust_score": trust_score,
+                "readiness_score": readiness_score,
                 "client_capabilities": client_capabilities,
                 "warnings": warnings,
             }
@@ -264,8 +291,8 @@ class MirrorMeBridgeHandler(BaseHTTPRequestHandler):
                 "state": "VERIFIED_LOCAL_SESSION",
                 "session_id": session_id,
                 "operator": operator,
-                "trust_score": trust_score,
-                "trust_mode": "local_operator_confirmation_not_cryptographic_authentication",
+                "readiness_score": readiness_score,
+                "readiness_mode": "local_runtime_confirmation_not_authentication",
                 "checks": {
                     "nonce_valid": True,
                     "confirmation_phrase_valid": True,
@@ -352,12 +379,19 @@ def main() -> None:
     parser.add_argument("--ollama-url", default=DEFAULT_OLLAMA_URL)
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--operator", default=DEFAULT_OPERATOR)
+    parser.add_argument(
+        "--allowed-origin",
+        action="append",
+        dest="allowed_origins",
+        help="Browser origin allowed to call the bridge; repeat for multiple origins.",
+    )
     args = parser.parse_args()
 
     server = ThreadingHTTPServer((args.host, args.port), MirrorMeBridgeHandler)
     server.ollama_url = args.ollama_url  # type: ignore[attr-defined]
     server.default_model = args.model  # type: ignore[attr-defined]
     server.operator = args.operator  # type: ignore[attr-defined]
+    server.allowed_origins = set(args.allowed_origins or DEFAULT_ALLOWED_ORIGINS)  # type: ignore[attr-defined]
     server.handshake_sessions = {}  # type: ignore[attr-defined]
 
     print(f"MirrorME local bridge running at http://{args.host}:{args.port}")
@@ -365,6 +399,7 @@ def main() -> None:
     print(f"Default model: {args.model}")
     print(f"Operator: {args.operator}")
     print(f"Handshake protocol: {HANDSHAKE_PROTOCOL_VERSION}")
+    print(f"Allowed browser origins: {', '.join(sorted(server.allowed_origins))}")
     server.serve_forever()
 
 
