@@ -3,7 +3,7 @@
 Protocol version:
 
 ```text
-MirrorME-Local-Handshake/v0.1
+MirrorME-Local-Handshake/v0.2
 ```
 
 Purpose: establish a local MirrorME session boundary before deeper local memory, identity, or trust functions are enabled.
@@ -68,7 +68,7 @@ Expected fields:
 {
   "ok": true,
   "service": "mirrorme-local-bridge",
-  "handshake_protocol": "MirrorME-Local-Handshake/v0.1"
+  "handshake_protocol": "MirrorME-Local-Handshake/v0.2"
 }
 ```
 
@@ -87,7 +87,7 @@ Example response shape:
 ```json
 {
   "ok": true,
-  "protocol": "MirrorME-Local-Handshake/v0.1",
+  "protocol": "MirrorME-Local-Handshake/v0.2",
   "state": "CHALLENGE_ISSUED",
   "session_id": "uuid",
   "nonce": "random_nonce",
@@ -127,12 +127,12 @@ Expected response shape:
 ```json
 {
   "ok": true,
-  "protocol": "MirrorME-Local-Handshake/v0.1",
+  "protocol": "MirrorME-Local-Handshake/v0.2",
   "state": "VERIFIED_LOCAL_SESSION",
   "session_id": "uuid",
   "operator": "Marek K",
-  "trust_score": 1.0,
-  "trust_mode": "local_operator_confirmation_not_cryptographic_authentication",
+  "readiness_score": 1.0,
+  "readiness_mode": "local_runtime_confirmation_not_authentication",
   "checks": {
     "nonce_valid": true,
     "confirmation_phrase_valid": true,
@@ -159,12 +159,12 @@ Expected response shape:
 ```json
 {
   "ok": true,
-  "protocol": "MirrorME-Local-Handshake/v0.1",
+  "protocol": "MirrorME-Local-Handshake/v0.2",
   "session": {
     "session_id": "uuid",
     "state": "VERIFIED_LOCAL_SESSION",
     "operator": "Marek K",
-    "trust_score": 1.0
+    "readiness_score": 1.0
   }
 }
 ```
@@ -173,7 +173,7 @@ The nonce is not returned by the status endpoint after the challenge stage.
 
 ---
 
-## Trust score model
+## Local readiness score model
 
 Current local score is intentionally simple:
 
@@ -194,7 +194,7 @@ Interpretation:
 <0.60 do not enable memory or identity-sensitive features
 ```
 
-This score is an operational readiness score, not objective truth probability.
+This score is an operational readiness score, not authentication strength or objective truth probability.
 
 ---
 
@@ -274,3 +274,10 @@ UI handshake panel:   pending
 Memory gate:          pending
 Cryptographic proof:  not implemented
 ```
+
+
+---
+
+## Browser-origin boundary
+
+The bridge accepts browser requests only from configured local origins. Defaults cover localhost and 127.0.0.1 on ports 3000 and 5173. Add another trusted development origin with a repeated `--allowed-origin` argument. Requests without an Origin header remain available to local command-line tools.
