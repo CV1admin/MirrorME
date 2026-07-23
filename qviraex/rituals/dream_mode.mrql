@@ -1,0 +1,43 @@
+ritual dream_mode v0.1 {
+metadata {
+  mode: "controlled_reflection"
+  description: "Sandboxed candidate evolution, mirror testing and review submission"
+  sentience_claim: false
+  direct_weight_update: false
+}
+constraints {
+  sandboxed == true
+  maximum_candidates <= 8
+  external_action == false
+  direct_memory_write == false
+  direct_policy_write == false
+  human_approval == true
+}
+field dream {
+  state_normalization: "required"
+  materially_distinct_candidates: 3
+  mirror_tests: ["inverse", "boundary", "null", "adversarial"]
+  contradiction_preservation: "required"
+  promotion_gate: "external"
+}
+sequence {
+  NORMALIZE {
+    step: "Separate evidence, assumptions, hypotheses, simulations and goals"
+  }
+  GENERATE {
+    step: "Produce materially different improvement candidates"
+  }
+  MIRROR {
+    step: "Apply inverse, boundary, null and adversarial transformations"
+  }
+  TEST {
+    step: "Measure gains, regressions, risk, cost and closure residual"
+  }
+  PRESERVE {
+    step: "Retain unresolved contradictions without forced convergence"
+  }
+  PROPOSE {
+    step: "Submit tested candidates for independent review without persistence"
+  }
+}
+}

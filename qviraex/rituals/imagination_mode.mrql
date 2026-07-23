@@ -1,0 +1,42 @@
+ritual imagination_mode v0.1 {
+metadata {
+  mode: "parallel_multi_context"
+  description: "Isolated candidate branches with structured comparison and synthesis"
+  sentience_claim: false
+  consensus_is_verification: false
+}
+constraints {
+  minimum_branches >= 4
+  maximum_branches <= 8
+  external_action == false
+  automatic_persistence == false
+  epistemic_separation == true
+}
+field imagination {
+  branch_isolation: "required"
+  first_barrier: "independent_generation"
+  exchange_format: "structured_candidate_summary"
+  diversity_gate: "required"
+  pareto_retention: "required"
+}
+sequence {
+  EXPAND {
+    step: "Generate materially different candidate models"
+  }
+  BARRIER {
+    step: "Synchronize only after independent first proposals"
+  }
+  COMPARE {
+    step: "Score evidence, consistency, feasibility, testability, novelty, risk and cost"
+  }
+  CRITIQUE {
+    step: "Apply counterfactual, boundary and adversarial objections"
+  }
+  SYNTHESIZE {
+    step: "Preserve unresolved alternatives and Pareto-optimal minority candidates"
+  }
+  SIGNAL {
+    step: "Emit auditable comparison summaries without hidden reasoning traces"
+  }
+}
+}
