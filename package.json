@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:mirrorme": "vite --host 127.0.0.1 --port 3000 --open /#/mirrorme",
     "dev:dashboard": "vite --host 0.0.0.0 --port 3000 --open /#/dashboard",
     "typecheck": "tsc --noEmit",
     "build": "vite build",
