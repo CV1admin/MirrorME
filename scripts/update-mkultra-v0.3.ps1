@@ -29,7 +29,7 @@ function Invoke-Checked {
     try {
         & $Command @Arguments
         if ($LASTEXITCODE -ne 0) {
-            throw "Command failed with exit code $LASTEXITCODE: $display"
+            throw "Command failed with exit code ${LASTEXITCODE}: $display"
         }
     }
     finally {
@@ -42,6 +42,31 @@ function Invoke-Checked {
 function Test-CommandAvailable {
     param([Parameter(Mandatory = $true)][string]$Name)
     return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
+function Get-PythonCommand {
+    if (Test-CommandAvailable "python") {
+        return [pscustomobject]@{
+            Command = "python"
+            PrefixArguments = @()
+        }
+    }
+
+    if (Test-CommandAvailable "py") {
+        return [pscustomobject]@{
+            Command = "py"
+            PrefixArguments = @("-3")
+        }
+    }
+
+    if (Test-CommandAvailable "python3") {
+        return [pscustomobject]@{
+            Command = "python3"
+            PrefixArguments = @()
+        }
+    }
+
+    return $null
 }
 
 if (-not (Test-CommandAvailable "git")) {
@@ -134,7 +159,7 @@ foreach ($repository in $manifest.repositories) {
     catch {
         $record.status = "failed"
         $record.message = $_.Exception.Message
-        Write-Warning "[FAILED] $fullName: $($_.Exception.Message)"
+        Write-Warning "[FAILED] ${fullName}: $($_.Exception.Message)"
     }
 
     $results.Add([pscustomobject]$record)
@@ -148,13 +173,15 @@ if (-not $SkipChecks) {
     }
 
     Write-Host "[CHECK] Python unit tests"
-    if (Test-CommandAvailable "python") {
-        Invoke-Checked -Command "python" -Arguments @(
+    $python = Get-PythonCommand
+    if ($null -ne $python) {
+        $pythonArguments = @($python.PrefixArguments) + @(
             "-m", "unittest", "discover", "-s", "qviraex", "-p", "test_*.py"
-        ) -WorkingDirectory $mirrorPath
+        )
+        Invoke-Checked -Command $python.Command -Arguments $pythonArguments -WorkingDirectory $mirrorPath
     }
     else {
-        Write-Warning "python was not found; Python tests skipped"
+        Write-Warning "No Python launcher was found (python, py, or python3); Python tests skipped"
     }
 
     if ((Test-CommandAvailable "npm") -and (Test-Path (Join-Path $mirrorPath "package-lock.json"))) {
