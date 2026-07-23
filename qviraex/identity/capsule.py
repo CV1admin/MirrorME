@@ -28,8 +28,24 @@ def canonical_json(data: dict[str, Any]) -> bytes:
     ).encode("utf-8")
 
 
+def capsule_commitment_payload(data: dict[str, Any]) -> dict[str, Any]:
+    """Return the signed commitment body without circular envelope fields.
+
+    ``capsule_id`` and ``signatures`` are envelope values derived from or made
+    over this body. Including them in their own digest would create an
+    impossible self-referential hash requirement.
+    """
+
+    return {
+        key: value
+        for key, value in data.items()
+        if key not in {"capsule_id", "signatures"}
+    }
+
+
 def capsule_hash(data: dict[str, Any]) -> str:
-    return f"sha256:{sha256(canonical_json(data)).hexdigest()}"
+    body = capsule_commitment_payload(data)
+    return f"sha256:{sha256(canonical_json(body)).hexdigest()}"
 
 
 class IdentityCapsuleVerifier:
@@ -67,10 +83,10 @@ class IdentityCapsuleVerifier:
 
         computed = capsule_hash(capsule)
         if computed != expected_document_hash:
-            raise IdentityCapsuleError("capsule content hash mismatch")
+            raise IdentityCapsuleError("capsule commitment hash mismatch")
 
         if capsule["capsule_id"] != expected_document_hash:
-            raise IdentityCapsuleError("capsule_id must equal immutable document hash")
+            raise IdentityCapsuleError("capsule_id must equal immutable commitment hash")
 
         declared_genesis = str(capsule["genesis_hash"])
         if not declared_genesis.startswith("sha256:"):
