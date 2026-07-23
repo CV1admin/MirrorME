@@ -5,6 +5,7 @@ import MirrorMe from './pages/MirrorMe';
 import ThinLineTheory from './pages/ThinLineTheory';
 import CivilisationDashboard from './pages/CivilisationDashboard';
 import OiiidsOperationsDashboard from './pages/OiiidsOperationsDashboard';
+import SystemMap from './pages/SystemMap';
 import MKultraV04 from './pages/MKultraV04';
 import { SimulationState, GateStatus, ContradictionEvent } from './types';
 import { createBrainNodes, createMetricFrame, isHealthyFrame } from './simulation/SimulationEngine';
@@ -61,7 +62,7 @@ const App: React.FC = () => {
       if (t > 0 && t % 300 === 0 && !activeContradiction) {
         activeContradiction = { ...MOCK_CONTRADICTION, timestamp: t };
       } else if (t % 500 === 0) {
-        activeContradiction = undefined; 
+        activeContradiction = undefined;
       }
 
       const isHealthy = isHealthyFrame(newFrame);
@@ -99,8 +100,8 @@ const App: React.FC = () => {
   }, [updateSim]);
 
   const toggleSimulation = () => {
-    setSimState(prev => ({ 
-      ...prev, 
+    setSimState(prev => ({
+      ...prev,
       isRunning: !prev.isRunning,
       gateStatus: prev.isRunning ? GateStatus.NOGO : GateStatus.STABILIZING,
       consecutiveGoFrames: 0,
@@ -116,6 +117,7 @@ const App: React.FC = () => {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<CivilisationDashboard />} />
           <Route path="/civilisation-dashboard" element={<CivilisationDashboard />} />
+          <Route path="/system-map" element={<SystemMap />} />
           <Route path="/oiiids-operations" element={<OiiidsOperationsDashboard />} />
           <Route path="/mirrorme" element={<MirrorMe simState={simState} />} />
           <Route path="/mkultra-v04" element={<MKultraV04 />} />
