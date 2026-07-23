@@ -6,6 +6,9 @@ const Sidebar: React.FC = () => {
     { to: '/mirrorme', label: 'MirrorMe', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
     )},
+    { to: '/system-map', label: 'Full System Map', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v6m0 0H3m6 0h6m6 0h-6m0 0V3m0 6v6m0 0H9m6 0h6m-6 0v6m-6-6v6m0 0H5a2 2 0 01-2-2v-4m6 6h10a2 2 0 002-2v-4" /></svg>
+    )},
     { to: '/oiiids-operations', label: 'OIIIDS Operations', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
     )},
@@ -34,10 +37,10 @@ const Sidebar: React.FC = () => {
         <NavLink
           key={link.to}
           to={link.to}
-          className={({ isActive }) => 
+          className={({ isActive }) =>
             `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-              isActive 
-                ? 'bg-slate-800 text-cyan-400 border border-slate-700' 
+              isActive
+                ? 'bg-slate-800 text-cyan-400 border border-slate-700'
                 : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
             }`
           }
