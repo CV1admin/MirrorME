@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import MirrorMe from './pages/MirrorMe';
 import ThinLineTheory from './pages/ThinLineTheory';
 import CivilisationDashboard from './pages/CivilisationDashboard';
+import MKultraV04 from './pages/MKultraV04';
 import { SimulationState, MetricFrame, BrainNode, GateStatus, ContradictionEvent } from './types';
 
 const INITIAL_NODES: BrainNode[] = Array.from({ length: 40 }).map((_, i) => ({
@@ -143,6 +144,7 @@ const App: React.FC = () => {
           <Route path="/dashboard" element={<CivilisationDashboard />} />
           <Route path="/civilisation-dashboard" element={<CivilisationDashboard />} />
           <Route path="/mirrorme" element={<MirrorMe simState={simState} />} />
+          <Route path="/mkultra-v04" element={<MKultraV04 />} />
           <Route path="/thin-line-theory" element={<ThinLineTheory />} />
         </Routes>
       </Layout>
