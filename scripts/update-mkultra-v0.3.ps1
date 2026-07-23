@@ -176,7 +176,7 @@ if (-not $SkipChecks) {
     $python = Get-PythonCommand
     if ($null -ne $python) {
         $pythonArguments = @($python.PrefixArguments) + @(
-            "-m", "unittest", "discover", "-s", "qviraex", "-p", "test_*.py"
+            "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py", "-v"
         )
         Invoke-Checked -Command $python.Command -Arguments $pythonArguments -WorkingDirectory $mirrorPath
     }
