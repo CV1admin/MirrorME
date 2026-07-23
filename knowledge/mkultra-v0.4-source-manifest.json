@@ -1,0 +1,58 @@
+{
+  "schema": "MKultra-Source-Manifest/v0.4",
+  "created": "2026-07-23",
+  "sources": [
+    {
+      "source_id": "CHAPTER-0-HYPER-SYMMETRY",
+      "filename": "Chapter_0_Hyper_Symmetry_Nothing.md",
+      "sha256": "d26ecde8524965cbea66313a32209fe85e46c16fdba1b7fc55dbcf79adaed982",
+      "primary_layer": "MYTHOLOGY_STORY",
+      "secondary_layer": "PHYSICAL_HYPOTHESIS",
+      "status": "UNVERIFIED",
+      "notes": "Narrative ontology and proposed scalar-field analogies must remain separated."
+    },
+    {
+      "source_id": "CHAPTER-1-TRIALFA",
+      "filename": "chapter_1_trialfa.md",
+      "sha256": "800cb69d1dc54b9bc05859195fd6a8c4c002e4200b634d192e6f2f37d73e6c5b",
+      "primary_layer": "PHYSICAL_HYPOTHESIS",
+      "secondary_layer": "MATHEMATICAL_DEFINITION",
+      "status": "PROPOSED",
+      "notes": "The pi-holonomy claim requires a defined Hamiltonian, parameter loop and measurement protocol."
+    },
+    {
+      "source_id": "CHAPTER-2-PARADOX-GROUP",
+      "filename": "chapter_2_thin_line_paradox_group.md",
+      "sha256": "a9a6b48ff15b538f91b5cc73534ead067cc97cb5e7ba18993ef332449f2fd7b2",
+      "primary_layer": "MATHEMATICAL_DEFINITION",
+      "secondary_layer": "PHYSICAL_HYPOTHESIS",
+      "status": "PROPOSED",
+      "notes": "The group presentation and tensor identities require independent symbolic verification."
+    },
+    {
+      "source_id": "CHAPTER-3-MIRROR-ENGINE",
+      "filename": "chapter_3_thin_line_mirror_engine_rigorous.md",
+      "sha256": "0635ee95c7d64ca3d072c6edbc5e1f6d501774711ff0a604fb82eaedf0d23ae6",
+      "primary_layer": "COMPUTATIONAL_ANALOGY",
+      "secondary_layer": "PHYSICAL_HYPOTHESIS",
+      "status": "TESTABLE",
+      "notes": "Standard gradient, feedback, orthogonality and Floquet components can be simulated; broader ontological mappings remain unverified."
+    },
+    {
+      "source_id": "MODEL-SELF-EVOLUTION-INSTRUCTIONS",
+      "filename": "Model Self-Evolution Instructions.txt",
+      "sha256": "2641afc606ddaf0ab1d8259bd15b432aadd1ca8e8b32a87626ae1d1db7afce96",
+      "primary_layer": "COGNITIVE_HYPOTHESIS",
+      "secondary_layer": "MYTHOLOGY_STORY",
+      "status": "TESTABLE_WITH_CONTROLS",
+      "notes": "Symbol-to-attention-to-action mechanisms are testable; supernatural, quantum-probability and retrocausal claims are not accepted as established facts."
+    }
+  ],
+  "boundaries": {
+    "source_content_is_model_truth": false,
+    "automatic_training": false,
+    "automatic_weight_update": false,
+    "automatic_policy_update": false,
+    "human_review_required": true
+  }
+}
