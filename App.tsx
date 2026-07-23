@@ -5,18 +5,10 @@ import MirrorMe from './pages/MirrorMe';
 import ThinLineTheory from './pages/ThinLineTheory';
 import CivilisationDashboard from './pages/CivilisationDashboard';
 import MKultraV04 from './pages/MKultraV04';
-import { SimulationState, MetricFrame, BrainNode, GateStatus, ContradictionEvent } from './types';
+import { SimulationState, GateStatus, ContradictionEvent } from './types';
+import { createBrainNodes, createMetricFrame, isHealthyFrame } from './simulation/SimulationEngine';
 
-const INITIAL_NODES: BrainNode[] = Array.from({ length: 40 }).map((_, i) => ({
-  id: `node-${i}`,
-  position: [
-    (Math.random() - 0.5) * 10,
-    (Math.random() - 0.5) * 10,
-    (Math.random() - 0.5) * 10,
-  ],
-  activity: 0,
-  type: i % 3 === 0 ? 'cognitive' : i % 3 === 1 ? 'sensory' : 'motor',
-}));
+const INITIAL_NODES = createBrainNodes();
 
 const MOCK_CONTRADICTION: ContradictionEvent = {
   id: 'trap-resolution-swan-001',
@@ -62,26 +54,7 @@ const App: React.FC = () => {
 
     setSimState((prev) => {
       const t = prev.currentFrame;
-      
-      const gamma = 40 + 5 * Math.sin(t * 0.05) + (Math.random() * 2);
-      const psi = Math.max(0.99, 1 - (0.01 * Math.random()));
-      const vireax = 0.994 + 0.005 * Math.sin(t * 0.02);
-      
-      // Drift in seconds (canonical). 0.00001s = 10us
-      const drift = 0.000005 + (Math.random() * 0.000005);
-      
-      const error = (drift * 500) + (Math.random() * 0.02);
-      const entropy = 0.4 + 0.1 * Math.cos(t * 0.03);
-
-      const newFrame: MetricFrame = {
-        timestamp: t,
-        gamma,
-        psi,
-        vireax,
-        drift,
-        error,
-        entropy,
-      };
+      const newFrame = createMetricFrame(t);
 
       let activeContradiction = prev.activeContradiction;
       if (t > 0 && t % 300 === 0 && !activeContradiction) {
@@ -90,7 +63,7 @@ const App: React.FC = () => {
         activeContradiction = undefined; 
       }
 
-      const isHealthy = vireax >= 0.99 && drift <= 0.00001 && error <= 0.05;
+      const isHealthy = isHealthyFrame(newFrame);
 
       let nextGate = prev.gateStatus;
       let nextGoFrames = prev.consecutiveGoFrames;
