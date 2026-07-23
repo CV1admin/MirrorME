@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import MirrorMe from './pages/MirrorMe';
 import ThinLineTheory from './pages/ThinLineTheory';
 import CivilisationDashboard from './pages/CivilisationDashboard';
+import OiiidsOperationsDashboard from './pages/OiiidsOperationsDashboard';
 import MKultraV04 from './pages/MKultraV04';
 import { SimulationState, GateStatus, ContradictionEvent } from './types';
 import { createBrainNodes, createMetricFrame, isHealthyFrame } from './simulation/SimulationEngine';
@@ -86,7 +87,6 @@ const App: React.FC = () => {
         consecutiveGoFrames: nextGoFrames,
         consecutiveNoGoFrames: nextNoGoFrames,
         currentFrame: t + 1,
-        // Ring buffer: keep last 100 points to ensure O(1) render time
         metrics: [...prev.metrics.slice(-99), newFrame],
         activeContradiction
       };
@@ -116,6 +116,7 @@ const App: React.FC = () => {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<CivilisationDashboard />} />
           <Route path="/civilisation-dashboard" element={<CivilisationDashboard />} />
+          <Route path="/oiiids-operations" element={<OiiidsOperationsDashboard />} />
           <Route path="/mirrorme" element={<MirrorMe simState={simState} />} />
           <Route path="/mkultra-v04" element={<MKultraV04 />} />
           <Route path="/thin-line-theory" element={<ThinLineTheory />} />

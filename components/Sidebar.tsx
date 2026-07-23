@@ -6,6 +6,9 @@ const Sidebar: React.FC = () => {
     { to: '/mirrorme', label: 'MirrorMe', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
     )},
+    { to: '/oiiids-operations', label: 'OIIIDS Operations', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+    )},
     { to: '/mkultra-v04', label: 'MKultra v0.4', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
     )},
@@ -50,14 +53,14 @@ const Sidebar: React.FC = () => {
           <div className="space-y-2">
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-400">Node Sync</span>
-              <span className="text-green-400">98.2%</span>
+              <span className="text-amber-400">Simulated</span>
             </div>
             <div className="w-full h-1 bg-slate-700 rounded-full overflow-hidden">
-              <div className="w-[98%] h-full bg-cyan-500" />
+              <div className="w-[65%] h-full bg-cyan-500" />
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-400">Entropy</span>
-              <span className="text-orange-400">Low</span>
+              <span className="text-slate-400">Production Gate</span>
+              <span className="text-red-400">Closed</span>
             </div>
           </div>
         </div>
