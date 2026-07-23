@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
+from math import isfinite
 from statistics import mean
 from typing import Any
 
@@ -16,6 +17,18 @@ class BranchRole(StrEnum):
     ADVERSARIAL_AUDITOR = "adversarial_auditor"
     NOVELTY_EXPLORER = "novelty_explorer"
     MINIMALIST = "minimalist"
+
+
+_SCORE_METRICS = (
+    "evidence",
+    "consistency",
+    "feasibility",
+    "testability",
+    "novelty",
+    "risk",
+    "cost",
+    "assumption_burden",
+)
 
 
 @dataclass(frozen=True)
@@ -32,10 +45,39 @@ class BranchCandidate:
     metrics: dict[str, float]
 
     def __post_init__(self) -> None:
-        if not self.central_claim.strip() or not self.mechanism.strip():
-            raise ValueError("candidate claim and mechanism must be non-empty")
-        if not 0.0 <= self.confidence <= 1.0:
-            raise ValueError("confidence must be between 0 and 1")
+        if not isinstance(self.branch_id, str) or not self.branch_id.strip():
+            raise ValueError("branch_id must be non-empty")
+        if not isinstance(self.role, BranchRole):
+            raise TypeError("role must be a BranchRole")
+        if not isinstance(self.central_claim, str) or not self.central_claim.strip():
+            raise ValueError("candidate claim must be non-empty")
+        if not isinstance(self.mechanism, str) or not self.mechanism.strip():
+            raise ValueError("candidate mechanism must be non-empty")
+        if not isfinite(float(self.confidence)) or not 0.0 <= self.confidence <= 1.0:
+            raise ValueError("confidence must be a finite value between 0 and 1")
+
+        for field_name in (
+            "assumptions",
+            "evidence_ids",
+            "predictions",
+            "failure_conditions",
+        ):
+            values = getattr(self, field_name)
+            if any(not isinstance(value, str) or not value.strip() for value in values):
+                raise ValueError(f"{field_name} must contain non-empty strings")
+
+        missing = tuple(metric for metric in _SCORE_METRICS if metric not in self.metrics)
+        if missing:
+            raise ValueError(f"candidate metrics are missing: {missing}")
+        unknown = tuple(sorted(set(self.metrics).difference(_SCORE_METRICS)))
+        if unknown:
+            raise ValueError(f"candidate metrics are unsupported: {unknown}")
+        for name, value in self.metrics.items():
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise TypeError(f"metric {name} must be numeric")
+            numeric = float(value)
+            if not isfinite(numeric) or not 0.0 <= numeric <= 1.0:
+                raise ValueError(f"metric {name} must be finite and between 0 and 1")
 
 
 @dataclass(frozen=True)
@@ -77,6 +119,10 @@ class ImaginationOrchestrator:
             raise ValueError("imagination mode requires at least four branches")
         if len(set(roles)) != len(roles):
             raise ValueError("branch roles must be unique")
+        if any(not isinstance(role, BranchRole) for role in roles):
+            raise TypeError("all roles must be BranchRole values")
+        if not isfinite(float(minimum_diversity)) or not 0.0 <= minimum_diversity <= 1.0:
+            raise ValueError("minimum_diversity must be finite and between 0 and 1")
         self.runner = runner
         self.roles = roles
         self.minimum_diversity = minimum_diversity
@@ -85,10 +131,18 @@ class ImaginationOrchestrator:
         if not objective.strip():
             raise ValueError("objective must be non-empty")
 
-        candidates = tuple(
-            self.runner(role, objective, dict(shared_context))
-            for role in self.roles
-        )
+        generated: list[BranchCandidate] = []
+        for role in self.roles:
+            candidate = self.runner(role, objective, dict(shared_context))
+            if not isinstance(candidate, BranchCandidate):
+                raise TypeError("runner must return BranchCandidate instances")
+            if candidate.role is not role:
+                raise ValueError(
+                    f"runner returned role {candidate.role.value} for requested role {role.value}"
+                )
+            generated.append(candidate)
+        candidates = tuple(generated)
+
         branch_ids = [candidate.branch_id for candidate in candidates]
         if len(set(branch_ids)) != len(branch_ids):
             raise ValueError("runner returned duplicate branch IDs")
@@ -116,16 +170,16 @@ class ImaginationOrchestrator:
     def _score(candidate: BranchCandidate) -> float:
         metric = candidate.metrics
         positive = (
-            metric.get("evidence", 0.0)
-            + metric.get("consistency", 0.0)
-            + metric.get("feasibility", 0.0)
-            + metric.get("testability", 0.0)
-            + metric.get("novelty", 0.0)
+            metric["evidence"]
+            + metric["consistency"]
+            + metric["feasibility"]
+            + metric["testability"]
+            + metric["novelty"]
         ) / 5.0
         penalty = (
-            metric.get("risk", 0.0)
-            + metric.get("cost", 0.0)
-            + metric.get("assumption_burden", 0.0)
+            metric["risk"]
+            + metric["cost"]
+            + metric["assumption_burden"]
         ) / 3.0
         return round(max(0.0, min(1.0, 0.75 * positive + 0.25 * (1.0 - penalty))), 4)
 
@@ -148,11 +202,11 @@ class ImaginationOrchestrator:
     @staticmethod
     def _dominates(left: BranchCandidate, right: BranchCandidate) -> bool:
         keys = ("evidence", "consistency", "feasibility", "testability")
-        left_values = [left.metrics.get(key, 0.0) for key in keys]
-        right_values = [right.metrics.get(key, 0.0) for key in keys]
+        left_values = [left.metrics[key] for key in keys]
+        right_values = [right.metrics[key] for key in keys]
         no_worse = all(a >= b for a, b in zip(left_values, right_values, strict=True))
         strictly_better = any(a > b for a, b in zip(left_values, right_values, strict=True))
-        lower_or_equal_risk = left.metrics.get("risk", 1.0) <= right.metrics.get("risk", 1.0)
+        lower_or_equal_risk = left.metrics["risk"] <= right.metrics["risk"]
         return no_worse and strictly_better and lower_or_equal_risk
 
     def _pareto_front(self, candidates: tuple[BranchCandidate, ...]) -> tuple[str, ...]:

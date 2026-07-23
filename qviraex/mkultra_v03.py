@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 from typing import Any
 from uuid import uuid4
 
@@ -15,6 +16,7 @@ from qviraex.vireax.consciousness_mode import (
     ConsciousnessObserverMode,
     EpistemicClass as ObserverEpistemicClass,
     InformationPacket,
+    ObserverState,
     PersistenceCheckpoint,
 )
 
@@ -41,6 +43,12 @@ class MKultraRuntime:
     does not implement autonomous persistence, external actions, or weight
     updates.
     """
+
+    _ACTIVE_OBSERVER_STATES = {
+        ObserverState.OBSERVING,
+        ObserverState.LOOPING,
+        ObserverState.CHECKPOINT_READY,
+    }
 
     def __init__(
         self,
@@ -98,11 +106,35 @@ class MKultraRuntime:
         tags: tuple[str, ...] = (),
         requires_resolution: bool = False,
     ) -> InspirationSpark | None:
+        """Ingest one packet without leaving partial state on validation failure."""
+
+        if self.observer.state not in self._ACTIVE_OBSERVER_STATES:
+            raise RuntimeError("MKultra runtime must be activated before ingestion")
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError("content must be non-empty")
+        if not isinstance(source, str) or not source.strip():
+            raise ValueError("source must be non-empty")
+        if not isinstance(provenance_hash, str) or not provenance_hash.strip():
+            raise ValueError("provenance_hash must be non-empty")
+        if not isinstance(epistemic_class, EpistemicClass):
+            raise TypeError("epistemic_class must be an EpistemicClass")
+        if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
+            raise TypeError("confidence must be a finite number")
+        confidence_value = float(confidence)
+        if not isfinite(confidence_value) or not 0.0 <= confidence_value <= 1.0:
+            raise ValueError("confidence must be between 0 and 1")
+        if not isinstance(tags, tuple):
+            raise TypeError("tags must be a tuple")
+        if any(not isinstance(tag, str) for tag in tags):
+            raise TypeError("all tags must be strings")
+        if type(requires_resolution) is not bool:
+            raise TypeError("requires_resolution must be a boolean")
+
         item = self.cognitive.remember(
             content=content,
             tags=tags,
             epistemic_class=epistemic_class,
-            confidence=confidence,
+            confidence=confidence_value,
         )
         observer_class = ObserverEpistemicClass(epistemic_class.value)
         self.observer.observe(
@@ -111,7 +143,7 @@ class MKultraRuntime:
                 source=source,
                 content=content,
                 epistemic_class=observer_class,
-                confidence=confidence,
+                confidence=confidence_value,
                 provenance_hash=provenance_hash,
                 requires_resolution=requires_resolution,
             )

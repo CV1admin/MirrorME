@@ -77,6 +77,9 @@ $ScriptDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepositoryRoot = Split-Path -Parent $ScriptDirectory
 $ManifestPath = Join-Path $RepositoryRoot "repositories/mkultra-v0.3-repositories.json"
 
+if (-not (Test-Path (Join-Path $RepositoryRoot ".git"))) {
+    throw "The updater must run from a Git checkout of MirrorME: $RepositoryRoot"
+}
 if (-not (Test-Path $ManifestPath)) {
     throw "Repository manifest not found: $ManifestPath"
 }
@@ -100,7 +103,16 @@ foreach ($repository in $manifest.repositories) {
     }
 
     $repoName = $parts[1]
-    $target = Join-Path $Root $repoName
+    $useCurrentCheckout = (
+        $null -ne $repository.PSObject.Properties["use_current_checkout"] -and
+        $repository.use_current_checkout -eq $true
+    )
+    $target = if ($useCurrentCheckout) {
+        $RepositoryRoot
+    }
+    else {
+        Join-Path $Root $repoName
+    }
     $cloneUrl = "https://github.com/$fullName.git"
     $ref = if ($null -ne $repository.PSObject.Properties["ref"] -and $repository.ref) {
         [string]$repository.ref
@@ -113,12 +125,16 @@ foreach ($repository in $manifest.repositories) {
         repository = $fullName
         target = $target
         ref = $ref
+        current_checkout = $useCurrentCheckout
         status = "pending"
         message = ""
     }
 
     try {
         if (-not (Test-Path (Join-Path $target ".git"))) {
+            if ($useCurrentCheckout) {
+                throw "Current MirrorME checkout is not a Git repository: $target"
+            }
             Write-Host "[CLONE] $fullName -> $target"
             Invoke-Checked -Command "git" -Arguments @("clone", "--filter=blob:none", $cloneUrl, $target)
         }
@@ -165,13 +181,9 @@ foreach ($repository in $manifest.repositories) {
     $results.Add([pscustomobject]$record)
 }
 
-$mirrorPath = Join-Path $Root "MirrorME"
+$mirrorPath = $RepositoryRoot
 
 if (-not $SkipChecks) {
-    if (-not (Test-Path $mirrorPath) -and -not $DryRun) {
-        throw "MirrorME checkout was not created: $mirrorPath"
-    }
-
     Write-Host "[CHECK] Python unit tests"
     $python = Get-PythonCommand
     if ($null -ne $python) {
@@ -214,6 +226,7 @@ $report = [ordered]@{
     release = "MKultra_v0.3"
     completed_at = (Get-Date).ToUniversalTime().ToString("o")
     root = $Root
+    mirrorme_path = $mirrorPath
     model = $ModelName
     dry_run = [bool]$DryRun
     repositories = $results

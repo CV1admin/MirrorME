@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.0.1",
   "release": "MKultra_v0.3",
-  "generated_at": "2026-07-23T09:25:39Z",
+  "generated_at": "2026-07-23T10:20:00Z",
   "owner": "CV1admin",
   "policy": {
     "operation": "local_clone_or_fast_forward",
@@ -11,7 +11,7 @@
     "continue_on_error": true
   },
   "repositories": [
-    {"full_name":"CV1admin/MirrorME","default_branch":"main","ref":"feature/mkultra-v0.3-full-stack","role":"runtime-foundation"},
+    {"full_name":"CV1admin/MirrorME","default_branch":"main","ref":"main","role":"runtime-foundation","use_current_checkout":true},
     {"full_name":"CV1admin/civilisation-one","default_branch":"main","role":"platform-core"},
     {"full_name":"CV1admin/mkone","default_branch":"main","role":"intelligence-core"},
     {"full_name":"CV1admin/MK-model","default_branch":"main","role":"model-assets"},
