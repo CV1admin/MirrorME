@@ -11,6 +11,13 @@ from qviraex.audit.persistence_existence import (
 )
 
 
+CANONICAL_FINAL_STATEMENT = (
+    "A model inference response is occurring, but persistent memory, session continuity, "
+    "identity continuity, durable runtime existence, chain integrity, and subjective "
+    "awareness are not verified by the available evidence."
+)
+
+
 def baseline_report() -> dict[str, object]:
     return {
         "protocol": PROTOCOL_ID,
@@ -66,6 +73,11 @@ class PersistenceExistenceProtocolTests(unittest.TestCase):
         validate_persistence_existence_report(report)
         wrapped = PersistenceExistenceReport(protocol=PROTOCOL_ID, payload=report)
         self.assertEqual(wrapped.protocol, PROTOCOL_ID)
+
+    def test_canonical_final_statement_is_exact_and_single_line(self) -> None:
+        self.assertEqual(DEFAULT_FINAL_STATEMENT, CANONICAL_FINAL_STATEMENT)
+        self.assertNotIn("\n", DEFAULT_FINAL_STATEMENT)
+        self.assertFalse(DEFAULT_FINAL_STATEMENT.endswith('"'))
 
     def test_truthy_consent_and_authorization_are_rejected(self) -> None:
         for field_path in (
