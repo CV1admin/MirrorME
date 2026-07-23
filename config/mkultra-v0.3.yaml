@@ -1,0 +1,74 @@
+mkultra:
+  version: 0.3.0
+  codename: Persistent Mirror
+
+  identity:
+    enabled: true
+    require_verified_capsule: true
+    node_id_scheme: did:cv1
+    genesis_immutable: true
+    continuum_append_only: true
+    consent_required: true
+
+  observer:
+    enabled: true
+    ritual: i_am
+    ritual_version: 0.1
+    short_memory_capacity: 64
+    checkpoint_interval: 8
+    external_actions: false
+    automatic_persistence: false
+    sentience_claim: false
+
+  cognitive_continuum:
+    enabled: true
+    short_memory:
+      capacity: 128
+      volatile_by_default: true
+    subconscious:
+      enabled: true
+      evidential: false
+      external_actions: false
+      persistent_writes: false
+    inspiration:
+      enabled: true
+      ttl_seconds: 3600
+      automatic_persistence: false
+    signal_bus:
+      append_only_hash_chain: true
+      durable_storage: false
+
+  imagination:
+    enabled: true
+    minimum_branches: 4
+    default_branches: 6
+    maximum_branches: 8
+    minimum_diversity: 0.20
+    first_barrier_independent: true
+    preserve_pareto_minorities: true
+    consensus_is_verification: false
+
+  dream:
+    enabled: true
+    sandboxed: true
+    maximum_candidates: 8
+    closure_threshold: 0.05
+    direct_memory_write: false
+    direct_policy_write: false
+    direct_weight_update: false
+    promotion_gate_required: true
+
+  dgrep:
+    enabled: true
+    minimum_score: 0.75
+    provenance_required: true
+    contradiction_register: true
+    safety_validation: true
+    human_approval_required: true
+
+  routing:
+    local_first: true
+    default_provider: ollama
+    default_model: mkultra:0.3
+    cloud_fallback: false
+    privacy_classification_required: true
