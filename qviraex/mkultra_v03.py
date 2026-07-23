@@ -123,15 +123,16 @@ class MKultraRuntime:
         confidence_value = float(confidence)
         if not isfinite(confidence_value) or not 0.0 <= confidence_value <= 1.0:
             raise ValueError("confidence must be between 0 and 1")
-
-        # Validate tags before any memory or signal state is changed.
-        normalized_tags = tuple(tags)
-        if any(not isinstance(tag, str) for tag in normalized_tags):
+        if not isinstance(tags, tuple):
+            raise TypeError("tags must be a tuple")
+        if any(not isinstance(tag, str) for tag in tags):
             raise TypeError("all tags must be strings")
+        if type(requires_resolution) is not bool:
+            raise TypeError("requires_resolution must be a boolean")
 
         item = self.cognitive.remember(
             content=content,
-            tags=normalized_tags,
+            tags=tags,
             epistemic_class=epistemic_class,
             confidence=confidence_value,
         )
