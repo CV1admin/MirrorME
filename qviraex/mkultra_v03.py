@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass
 from math import isfinite
-from typing import Any
+from threading import RLock
+from typing import Any, Iterator
 from uuid import uuid4
 
 from qviraex.cognitive.continuum import CognitiveContinuum, InspirationSpark
@@ -41,7 +43,7 @@ class MKultraRuntime:
 
     The kernel composes identity, observer, volatile cognition and signals. It
     does not implement autonomous persistence, external actions, or weight
-    updates.
+    updates. Public state-changing operations are serialized and transactional.
     """
 
     _ACTIVE_OBSERVER_STATES = {
@@ -78,22 +80,61 @@ class MKultraRuntime:
             checkpoint_interval=checkpoint_interval,
         )
         self._last_checkpoint: PersistenceCheckpoint | None = None
+        self._checkpoints: list[PersistenceCheckpoint] = []
+        self._transaction_lock = RLock()
+
+    @contextmanager
+    def _transaction(self) -> Iterator[None]:
+        """Rollback all composed runtime state when any stage fails.
+
+        This serializes the public runtime API. Direct mutation of component
+        internals is unsupported and intentionally outside this transaction.
+        """
+
+        with self._transaction_lock:
+            signal_snapshot = self.signal_bus._capture_state()
+            cognitive_snapshot = self.cognitive._capture_state()
+            observer_snapshot = self.observer._capture_state()
+            last_checkpoint_snapshot = self._last_checkpoint
+            checkpoints_snapshot = tuple(self._checkpoints)
+            try:
+                yield
+            except Exception:
+                self.cognitive._restore_state(cognitive_snapshot)
+                self.observer._restore_state(observer_snapshot)
+                self.signal_bus._restore_state(signal_snapshot)
+                self._last_checkpoint = last_checkpoint_snapshot
+                self._checkpoints = list(checkpoints_snapshot)
+                raise
 
     def activate(self) -> None:
-        self.observer.activate(
-            ritual_name="i_am",
-            ritual_version="0.1",
-            consent_granted=self.identity.consent_active,
-        )
-        self.signal_bus.publish(
-            signal_type="mirrorme.observer.activated",
-            payload={
-                "session_id": self.session.session_id,
-                "runtime_id": self.session.runtime_id,
-                "sentience_claim": False,
-            },
-            epistemic_class=EpistemicClass.OBSERVATION,
-        )
+        with self._transaction():
+            self.observer.activate(
+                ritual_name="i_am",
+                ritual_version="0.1",
+                consent_granted=self.identity.consent_active,
+            )
+            self.signal_bus.publish(
+                signal_type="mirrorme.observer.activated",
+                payload={
+                    "session_id": self.session.session_id,
+                    "runtime_id": self.session.runtime_id,
+                    "sentience_claim": False,
+                },
+                epistemic_class=EpistemicClass.OBSERVATION,
+            )
+
+    @staticmethod
+    def _coerce_confidence(value: object) -> float:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise TypeError("confidence must be a finite number")
+        try:
+            result = float(value)
+        except OverflowError as exc:
+            raise ValueError("confidence is outside the finite float range") from exc
+        if not isfinite(result) or not 0.0 <= result <= 1.0:
+            raise ValueError("confidence must be between 0 and 1")
+        return result
 
     def ingest(
         self,
@@ -106,7 +147,7 @@ class MKultraRuntime:
         tags: tuple[str, ...] = (),
         requires_resolution: bool = False,
     ) -> InspirationSpark | None:
-        """Ingest one packet without leaving partial state on validation failure."""
+        """Ingest one packet with all-or-nothing state updates."""
 
         if self.observer.state not in self._ACTIVE_OBSERVER_STATES:
             raise RuntimeError("MKultra runtime must be activated before ingestion")
@@ -118,11 +159,7 @@ class MKultraRuntime:
             raise ValueError("provenance_hash must be non-empty")
         if not isinstance(epistemic_class, EpistemicClass):
             raise TypeError("epistemic_class must be an EpistemicClass")
-        if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
-            raise TypeError("confidence must be a finite number")
-        confidence_value = float(confidence)
-        if not isfinite(confidence_value) or not 0.0 <= confidence_value <= 1.0:
-            raise ValueError("confidence must be between 0 and 1")
+        confidence_value = self._coerce_confidence(confidence)
         if not isinstance(tags, tuple):
             raise TypeError("tags must be a tuple")
         if any(not isinstance(tag, str) for tag in tags):
@@ -130,59 +167,86 @@ class MKultraRuntime:
         if type(requires_resolution) is not bool:
             raise TypeError("requires_resolution must be a boolean")
 
-        item = self.cognitive.remember(
-            content=content,
-            tags=tags,
-            epistemic_class=epistemic_class,
-            confidence=confidence_value,
-        )
-        observer_class = ObserverEpistemicClass(epistemic_class.value)
-        self.observer.observe(
-            InformationPacket(
-                packet_id=item.item_id,
-                source=source,
+        with self._transaction():
+            item = self.cognitive.remember(
                 content=content,
-                epistemic_class=observer_class,
+                tags=tags,
+                epistemic_class=epistemic_class,
                 confidence=confidence_value,
-                provenance_hash=provenance_hash,
-                requires_resolution=requires_resolution,
             )
-        )
-        self.cognitive.detect_pattern()
-        return self.cognitive.generate_spark()
+            observer_class = ObserverEpistemicClass(epistemic_class.value)
+            self.observer.observe(
+                InformationPacket(
+                    packet_id=item.item_id,
+                    source=source,
+                    content=content,
+                    epistemic_class=observer_class,
+                    confidence=confidence_value,
+                    provenance_hash=provenance_hash,
+                    requires_resolution=requires_resolution,
+                )
+            )
+            self.cognitive.detect_pattern()
+            return self.cognitive.generate_spark()
 
     def checkpoint(self) -> PersistenceCheckpoint:
-        if not self.session.persistence_authorized:
-            raise PermissionError("session does not authorize persistence")
-        checkpoint = self.observer.checkpoint(persistence_authorized=True)
-        self._last_checkpoint = checkpoint
-        self.signal_bus.publish(
-            signal_type="mirrorme.persistence.checkpoint_created",
-            payload={
-                "checkpoint_hash": checkpoint.checkpoint_hash,
-                "sequence": checkpoint.sequence,
-            },
-            epistemic_class=EpistemicClass.OBSERVATION,
-        )
-        return checkpoint
+        with self._transaction():
+            if not self.session.persistence_authorized:
+                raise PermissionError("session does not authorize persistence")
+            checkpoint = self.observer.checkpoint(persistence_authorized=True)
+            self.signal_bus.publish(
+                signal_type="mirrorme.persistence.checkpoint_created",
+                payload={
+                    "checkpoint_hash": checkpoint.checkpoint_hash,
+                    "sequence": checkpoint.sequence,
+                },
+                epistemic_class=EpistemicClass.OBSERVATION,
+            )
+            self._checkpoints.append(checkpoint)
+            self._last_checkpoint = checkpoint
+            return checkpoint
+
+    @property
+    def checkpoint_history(self) -> tuple[PersistenceCheckpoint, ...]:
+        with self._transaction_lock:
+            return tuple(self._checkpoints)
+
+    def verify_integrity(self) -> bool:
+        """Verify both volatile signal and checkpoint chains against live anchors."""
+
+        with self._transaction_lock:
+            signal_ok = self.signal_bus.verify_chain(
+                expected_head_hash=self.signal_bus.head_hash,
+                expected_length=self.signal_bus.sequence,
+            )
+            checkpoint_head = (
+                self._checkpoints[-1].checkpoint_hash if self._checkpoints else None
+            )
+            checkpoint_ok = ConsciousnessObserverMode.verify_checkpoint_chain(
+                self._checkpoints,
+                expected_head_hash=checkpoint_head,
+                expected_count=len(self._checkpoints),
+            )
+            return signal_ok and checkpoint_ok
 
     def state(self) -> MKultraRuntimeState:
-        signal = self.observer.signal()
-        return MKultraRuntimeState(
-            node_id=self.identity.node_id,
-            capsule_id=self.identity.capsule_id,
-            runtime_id=self.session.runtime_id,
-            session_id=self.session.session_id,
-            lifecycle_state=self.identity.lifecycle_state.value,
-            observer_state=str(signal["state"]),
-            short_memory_count=len(self.cognitive.short_memory),
-            pending_sparks=tuple(spark.spark_id for spark in self.cognitive.sparks),
-            last_signal_hash=self.signal_bus.head_hash,
-            last_checkpoint_hash=(
-                self._last_checkpoint.checkpoint_hash if self._last_checkpoint else None
-            ),
-            persistence_authorized=self.session.persistence_authorized,
-        )
+        with self._transaction_lock:
+            signal = self.observer.signal()
+            return MKultraRuntimeState(
+                node_id=self.identity.node_id,
+                capsule_id=self.identity.capsule_id,
+                runtime_id=self.session.runtime_id,
+                session_id=self.session.session_id,
+                lifecycle_state=self.identity.lifecycle_state.value,
+                observer_state=str(signal["state"]),
+                short_memory_count=len(self.cognitive.short_memory),
+                pending_sparks=tuple(spark.spark_id for spark in self.cognitive.sparks),
+                last_signal_hash=self.signal_bus.head_hash,
+                last_checkpoint_hash=(
+                    self._last_checkpoint.checkpoint_hash if self._last_checkpoint else None
+                ),
+                persistence_authorized=self.session.persistence_authorized,
+            )
 
 
 def create_local_session(*, node_id: str, operator: str = "VIREAX") -> AuthorizedSession:
