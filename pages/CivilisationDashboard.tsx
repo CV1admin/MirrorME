@@ -1,405 +1,315 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+
+type WorkspaceTask = {
+  id: string;
+  title: string;
+  area: string;
+  done: boolean;
+};
+
+type ActivityEntry = {
+  id: string;
+  message: string;
+  timestamp: string;
+};
+
+const STORAGE_KEY = 'civilisation-one-dashboard-v1';
+
+const modules = [
+  {
+    id: 'learning',
+    title: 'Learning Hub',
+    description: 'Courses, quizzes, simulations, certificates and adaptive pathways.',
+    status: 'Planned',
+    action: 'Create learning pathway',
+  },
+  {
+    id: 'research',
+    title: 'Research Collaboration',
+    description: 'Projects, datasets, methods, peer review and replication records.',
+    status: 'Development',
+    action: 'Start research workspace',
+  },
+  {
+    id: 'knowledge',
+    title: 'Knowledge Database',
+    description: 'Searchable, versioned and evidence-labelled knowledge resources.',
+    status: 'Development',
+    action: 'Open resource explorer',
+  },
+  {
+    id: 'laboratory',
+    title: 'Virtual Laboratory',
+    description: 'Reproducible simulations and Thin Line Lab experiment workflows.',
+    status: 'Available',
+    action: 'Open Thin Line Lab',
+  },
+  {
+    id: 'community',
+    title: 'Community',
+    description: 'Study groups, mentoring, expert sessions and structured debate.',
+    status: 'Planned',
+    action: 'Create community space',
+  },
+  {
+    id: 'sponsorship',
+    title: 'Talent Sponsorship',
+    description: 'Transparent milestones, funding records and outcome reporting.',
+    status: 'Planned',
+    action: 'Create sponsorship case',
+  },
+];
+
+const initialTasks: WorkspaceTask[] = [
+  { id: 'task-1', title: 'Define first public learning pathway', area: 'Learning', done: false },
+  { id: 'task-2', title: 'Connect OIIIDS resource publication API', area: 'Infrastructure', done: false },
+  { id: 'task-3', title: 'Prepare research submission workflow', area: 'Research', done: false },
+  { id: 'task-4', title: 'Review governance and safeguarding gates', area: 'Governance', done: true },
+];
+
+const statusClass = (status: string) => {
+  if (status === 'Available') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+  if (status === 'Development') return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+  return 'border-slate-700 bg-slate-800 text-slate-400';
+};
 
 const CivilisationDashboard: React.FC = () => {
-  const missionPillars = [
-    'Open scientific education',
-    'AI-assisted learning',
-    'Collaborative research',
-    'Ethical innovation',
-    'Talent sponsorship',
-    'Scientific simulations',
-    'Collective knowledge verification',
-    'Space exploration and future-oriented research',
-  ];
+  const [query, setQuery] = useState('');
+  const [activeArea, setActiveArea] = useState('All');
+  const [tasks, setTasks] = useState<WorkspaceTask[]>(initialTasks);
+  const [draftTask, setDraftTask] = useState('');
+  const [activity, setActivity] = useState<ActivityEntry[]>([]);
+  const [notice, setNotice] = useState('');
 
-  const coreQuestions = [
-    'What is the nature and meaning of life?',
-    'How did the universe originate?',
-    'How do consciousness and perception emerge?',
-    'How does quantum physics change our understanding of reality?',
-    'How does AI influence human knowledge, belief, creativity, and decision-making?',
-    'How can scientific progress improve happiness, safety, education, and human cooperation?',
-  ];
+  useEffect(() => {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (!stored) return;
 
-  const structureBlocks = [
-    {
-      title: 'Learning Hub',
-      items: [
-        'Interactive courses, quizzes, practical exercises, simulations, and certificates',
-        'Disciplines: math, physics, astronomy, biology, chemistry, computer science, AI, quantum, engineering, climate, philosophy of science, ethics',
-        'Classification: established knowledge, active research, competing interpretation, speculative hypothesis, independently submitted theory',
-      ],
-    },
-    {
-      title: 'Research Collaboration Space',
-      items: [
-        'Project creation, team formation, datasets/code sharing, simulation runs, research logs',
-        'Preprints, reports, peer review, revision tracking, replication support, mentorship',
-        'Methodology, assumptions, funding, conflicts, evidence level, and verification status visibility',
-      ],
-    },
-    {
-      title: 'Talent Sponsorship',
-      items: [
-        'Support students, independent researchers, educators, teams, open-source, and underfunded disciplines',
-        'Transparent milestones, expenditure logs, and outcome reporting',
-      ],
-    },
-    {
-      title: 'Interactive Community',
-      items: [
-        'Q&A, debates, study groups, research communities, expert sessions, peer mentoring',
-        'Reputation based on citations, verification success, and ethical conduct',
-      ],
-    },
-  ];
+    try {
+      const parsed = JSON.parse(stored) as { tasks?: WorkspaceTask[]; activity?: ActivityEntry[] };
+      if (Array.isArray(parsed.tasks)) setTasks(parsed.tasks);
+      if (Array.isArray(parsed.activity)) setActivity(parsed.activity);
+    } catch {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
 
-  const featureTools = [
-    'Searchable Knowledge Database',
-    'AI-Assisted Tutoring',
-    'Virtual Laboratory',
-    'Scholarship and Grant Finder',
-  ];
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, activity }));
+  }, [tasks, activity]);
 
-  const profileDimensions = [
-    'Knowledge',
-    'Verification',
-    'Learning',
-    'Collaboration',
-    'Creativity',
-    'Ethics',
-    'Wellbeing',
-    'Contribution',
-  ];
+  const filteredModules = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return modules.filter((module) => {
+      const matchesQuery = !normalizedQuery || `${module.title} ${module.description}`.toLowerCase().includes(normalizedQuery);
+      const matchesArea = activeArea === 'All' || module.status === activeArea;
+      return matchesQuery && matchesArea;
+    });
+  }, [query, activeArea]);
 
-  const governanceBodies = [
-    'Scientific review',
-    'AI ethics',
-    'Data protection',
-    'Financial oversight',
-    'Child safety',
-    'Research integrity',
-    'Appeals and dispute resolution',
-    'Community moderation',
-  ];
+  const completion = tasks.length === 0 ? 0 : Math.round((tasks.filter((task) => task.done).length / tasks.length) * 100);
 
-  const legalFramework = [
-    'Data protection and privacy',
-    'Copyright and educational licensing',
-    'Child and student safeguarding',
-    'Consumer rights and accessibility',
-    'Research ethics and AI transparency',
-    'Financial transactions and sponsorship disclosure',
-    'International data transfers and certification claims',
-  ];
+  const recordActivity = (message: string) => {
+    setActivity((previous) => [
+      { id: `${Date.now()}-${Math.random()}`, message, timestamp: new Date().toLocaleString() },
+      ...previous,
+    ].slice(0, 8));
+  };
 
-  const decentralisedStatements = [
-    {
-      title: '1. Purpose',
-      text: 'Civilisation.One advances universal education, scientific verification, and ethical AI through open, decentralised collaboration.',
-    },
-    {
-      title: '2. Decentralisation by Design',
-      text: 'No single node controls knowledge or direction. Governance emerges through transparent standards and mutual verification.',
-    },
-    {
-      title: '3. Open Knowledge and Verifiability',
-      text: 'Models, simulations, and learning pathways are designed to be inspectable, testable, and reproducible.',
-    },
-    {
-      title: '4. Education Without Barriers',
-      text: 'Age-universal access with complexity scaling, supporting early learners, students, and experts from the same core structure.',
-    },
-    {
-      title: '5. Science as a Living Process',
-      text: 'Hypotheses are encouraged, challenged, refined, or discarded through evidence, coherence, and peer review.',
-    },
-    {
-      title: '6. Human-AI Co-Learning',
-      text: 'AI assists with simulation, explanation, and reasoning under auditable constraints and clear accountability.',
-    },
-    {
-      title: '7. Ethical Alignment',
-      text: 'Protocols enforce no-harm, transparency, fairness, and respect for human agency. Ethics is built-in, not bolted-on.',
-    },
-    {
-      title: '8. Cultural and Political Neutrality',
-      text: 'Not bound to any nation or ideology. Diverse perspectives are welcome while remaining evidence-grounded.',
-    },
-    {
-      title: '9. Collective Intelligence',
-      text: 'Constructive dissent and contradiction are treated as engines of understanding, not threats to it.',
-    },
-    {
-      title: '10. Stewardship of the Future',
-      text: 'Curricula, tools, and AI systems are designed for long-term civilisational stability, sustainability, and wisdom.',
-    },
-    {
-      title: '11. Transparency of Power',
-      text: 'Decision systems, algorithms, and governance mechanisms are visible and accountable. Influence is earned by contribution.',
-    },
-    {
-      title: '12. Invitation',
-      text: 'Open to learners, educators, scientists, builders, and explorers. Participation is shared stewardship of knowledge.',
-    },
-  ];
+  const handleModuleAction = (title: string, status: string) => {
+    if (status === 'Available') {
+      setNotice(`${title} is available through the linked workspace.`);
+      recordActivity(`Opened ${title}`);
+      return;
+    }
 
-  const operatingPrinciples = [
-    {
-      title: 'Verification over authority',
-      text: 'Claims gain status through reproducibility, traceable reasoning, and evidence, not titles, brands, or hierarchy.',
-    },
-    {
-      title: 'Transparency by default',
-      text: 'When AI assists, assumptions, limitations, and decision criteria are published whenever feasible.',
-    },
-    {
-      title: 'No-harm and human agency',
-      text: 'People are protected from manipulation and coercion, with the right to opt out, disagree, and fork.',
-    },
-  ];
+    const message = `${title} requires backend integration before it can become operational.`;
+    setNotice(message);
+    recordActivity(`Requested ${title} functionality`);
+  };
 
-  const participationTracks = [
-    {
-      title: 'Learners',
-      text: 'Follow guided pathways, explore simulations, and test understanding through interactive problem-solving.',
-    },
-    {
-      title: 'Educators',
-      text: 'Publish lessons, verification exercises, and curricula that others can reproduce and improve.',
-    },
-    {
-      title: 'Researchers and Builders',
-      text: 'Contribute models, datasets, experiments, code, and peer review to help the network converge on what holds up.',
-    },
-  ];
+  const toggleTask = (taskId: string) => {
+    setTasks((previous) => previous.map((task) => task.id === taskId ? { ...task, done: !task.done } : task));
+    const task = tasks.find((item) => item.id === taskId);
+    if (task) recordActivity(`${task.done ? 'Reopened' : 'Completed'} task: ${task.title}`);
+  };
 
-  const architectureLayers = [
-    {
-      title: 'Browser / PWA',
-      stack: 'Next.js + TypeScript',
-      detail: 'Local encrypted profile and consent state',
-    },
-    {
-      title: 'Civilisation.One API',
-      stack: 'FastAPI + Python',
-      detail: 'Authentication, governance, moderation',
-    },
-    {
-      title: 'PostgreSQL',
-      stack: 'PostGIS + RLS',
-      detail: 'Platform records',
-    },
-    {
-      title: 'Worker',
-      stack: 'Background processing',
-      detail: 'Notifications, metrics and reports',
-    },
-    {
-      title: 'S3-compatible object storage',
-      stack: 'Blob and evidence layer',
-      detail: 'Evidence, images, reports and datasets',
-    },
-  ];
+  const addTask = (event: React.FormEvent) => {
+    event.preventDefault();
+    const title = draftTask.trim();
+    if (!title) return;
+
+    setTasks((previous) => [
+      ...previous,
+      { id: `task-${Date.now()}`, title, area: 'General', done: false },
+    ]);
+    setDraftTask('');
+    recordActivity(`Created task: ${title}`);
+  };
+
+  const resetWorkspace = () => {
+    setTasks(initialTasks);
+    setActivity([]);
+    setNotice('Local dashboard workspace reset.');
+    window.localStorage.removeItem(STORAGE_KEY);
+  };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-end justify-between gap-4">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 overflow-y-auto h-full">
+      <header className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
         <div>
-          <h2 className="text-3xl font-bold text-slate-100 mb-2">Civilisation One</h2>
-          <p className="text-slate-400">Global scientific learning, research, and human development platform.</p>
+          <div className="text-[10px] uppercase tracking-[0.3em] text-cyan-500 font-bold mb-2">Civilisation.One Control Surface</div>
+          <h2 className="text-3xl font-bold text-slate-100 mb-2">Platform Dashboard</h2>
+          <p className="text-slate-400 max-w-3xl">
+            Interactive local workspace for navigating platform modules, tracking implementation tasks and exposing production blockers.
+          </p>
         </div>
-        <div className="px-5 py-3 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-300">
-          <div className="text-[10px] uppercase tracking-widest font-bold">Positioning</div>
-          <div className="text-sm font-black leading-tight">Open Scientific Learning and Collaboration Ecosystem</div>
-        </div>
-      </div>
-
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-        <h3 className="text-xs uppercase tracking-widest text-cyan-400 font-bold mb-4">Vision and Mission</h3>
-        <p className="text-sm text-slate-300 mb-4">
-          To create a globally accessible platform for scientific learning, research, innovation, and interdisciplinary collaboration,
-          helping people understand the universe, develop their abilities, and contribute responsibly to civilisation.
-        </p>
         <div className="flex flex-wrap gap-2">
-          {missionPillars.map((pillar) => (
-            <span key={pillar} className="px-2.5 py-1 rounded-full text-[11px] border border-cyan-500/20 bg-cyan-500/10 text-cyan-300">
-              {pillar}
-            </span>
-          ))}
+          <Link to="/system-map" className="px-4 py-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-sm font-bold hover:bg-cyan-500/20">
+            Full System Map
+          </Link>
+          <Link to="/oiiids-operations" className="px-4 py-2 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-sm font-bold hover:bg-indigo-500/20">
+            OIIIDS Operations
+          </Link>
         </div>
+      </header>
+
+      {notice && (
+        <div className="flex items-start justify-between gap-4 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-200">
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice('')} className="text-cyan-400 hover:text-white">Dismiss</button>
+        </div>
+      )}
+
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          ['Platform mode', 'Local MVP'],
+          ['Production gate', 'Closed'],
+          ['Task completion', `${completion}%`],
+          ['Operational modules', `${modules.filter((module) => module.status === 'Available').length}/${modules.length}`],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+            <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">{label}</div>
+            <div className="text-xl font-black text-slate-100">{value}</div>
+          </div>
+        ))}
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-        <h3 className="text-xs uppercase tracking-widest text-cyan-400 font-bold mb-4">Core Research Motivation</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {coreQuestions.map((question) => (
-            <div key={question} className="p-3 rounded-xl border border-slate-800 bg-slate-950 text-sm text-slate-300">
-              {question}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-bold text-slate-100">Platform Modules</h3>
+            <p className="text-xs text-slate-500 mt-1">Search and inspect the current implementation state.</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search modules"
+              className="min-w-[220px] rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 outline-none focus:border-cyan-500"
+            />
+            <select
+              value={activeArea}
+              onChange={(event) => setActiveArea(event.target.value)}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 outline-none focus:border-cyan-500"
+            >
+              <option>All</option>
+              <option>Available</option>
+              <option>Development</option>
+              <option>Planned</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filteredModules.map((module) => (
+            <article key={module.id} className="rounded-xl border border-slate-800 bg-slate-950 p-4 flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h4 className="font-bold text-slate-100">{module.title}</h4>
+                  <p className="text-sm text-slate-400 mt-2">{module.description}</p>
+                </div>
+                <span className={`shrink-0 rounded-full border px-2 py-1 text-[10px] uppercase font-bold ${statusClass(module.status)}`}>
+                  {module.status}
+                </span>
+              </div>
+              {module.id === 'laboratory' ? (
+                <Link to="/thin-line-theory" onClick={() => recordActivity('Opened Thin Line Lab')} className="mt-auto text-center rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-300 hover:bg-cyan-500/20">
+                  {module.action}
+                </Link>
+              ) : module.id === 'knowledge' ? (
+                <Link to="/oiiids-operations" onClick={() => recordActivity('Opened OIIIDS Resource Explorer')} className="mt-auto text-center rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-xs font-bold text-indigo-300 hover:bg-indigo-500/20">
+                  {module.action}
+                </Link>
+              ) : (
+                <button type="button" onClick={() => handleModuleAction(module.title, module.status)} className="mt-auto rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-bold text-slate-300 hover:border-cyan-500/40 hover:text-cyan-300">
+                  {module.action}
+                </button>
+              )}
+            </article>
+          ))}
+        </div>
+
+        {filteredModules.length === 0 && (
+          <div className="rounded-xl border border-dashed border-slate-700 p-8 text-center text-sm text-slate-500">No modules match the current filters.</div>
+        )}
+      </section>
+
+      <section className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        <div className="xl:col-span-2 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Implementation Tasks</h3>
+              <p className="text-xs text-slate-500 mt-1">Saved in this browser until a durable backend is connected.</p>
             </div>
-          ))}
-        </div>
-        <p className="text-xs text-slate-500 mt-4">
-          Participation in social research must be voluntary, consent-based, privacy-protected, and revocable.
-        </p>
-      </section>
+            <button type="button" onClick={resetWorkspace} className="text-xs text-slate-500 hover:text-red-300">Reset</button>
+          </div>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-        <h3 className="text-xs uppercase tracking-widest text-cyan-400 font-bold mb-4">Platform Structure</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {structureBlocks.map((block) => (
-            <div key={block.title} className="p-4 rounded-xl border border-slate-800 bg-slate-950">
-              <h4 className="text-sm font-bold text-slate-200 mb-2">{block.title}</h4>
-              <ul className="space-y-2 text-sm text-slate-400">
-                {block.items.map((item) => (
-                  <li key={item} className="border border-slate-800 rounded-md px-2 py-1.5">{item}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </section>
+          <form onSubmit={addTask} className="flex gap-2 mb-4">
+            <input
+              value={draftTask}
+              onChange={(event) => setDraftTask(event.target.value)}
+              placeholder="Add implementation task"
+              className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 outline-none focus:border-cyan-500"
+            />
+            <button type="submit" className="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-black text-slate-950 hover:bg-cyan-400">Add</button>
+          </form>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-          <h3 className="text-xs uppercase tracking-widest text-cyan-400 font-bold mb-4">Features and Tools</h3>
-          <ul className="space-y-2 text-sm text-slate-300">
-            {featureTools.map((tool) => (
-              <li key={tool} className="p-2 rounded-md border border-slate-800 bg-slate-950">{tool}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-          <h3 className="text-xs uppercase tracking-widest text-cyan-400 font-bold mb-4">Civilisation 2 Profile Dimensions</h3>
-          <div className="flex flex-wrap gap-2">
-            {profileDimensions.map((dimension) => (
-              <span key={dimension} className="px-3 py-1 text-xs rounded-full border border-emerald-500/25 bg-emerald-500/10 text-emerald-300">
-                {dimension}
-              </span>
+          <div className="space-y-2">
+            {tasks.map((task) => (
+              <label key={task.id} className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950 px-3 py-3 cursor-pointer">
+                <input type="checkbox" checked={task.done} onChange={() => toggleTask(task.id)} className="accent-cyan-500" />
+                <span className={`flex-1 text-sm ${task.done ? 'line-through text-slate-600' : 'text-slate-300'}`}>{task.title}</span>
+                <span className="text-[10px] uppercase tracking-wider text-slate-600">{task.area}</span>
+              </label>
             ))}
           </div>
-          <p className="text-xs text-slate-500 mt-4">
-            Placeholder formula: C2 = wK*K + wV*V + wL*L + wC*C + wR*R + wE*E + wW*W + wI*I
-          </p>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-        <h3 className="text-xs uppercase tracking-widest text-cyan-400 font-bold mb-4">Happiness and Safety Data Principles</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-300">
-          <div className="p-3 rounded-xl border border-slate-800 bg-slate-950">Use aggregate statistics wherever possible.</div>
-          <div className="p-3 rounded-xl border border-slate-800 bg-slate-950">Collect sensitive data only with explicit consent and clear purpose.</div>
-          <div className="p-3 rounded-xl border border-slate-800 bg-slate-950">Publish retention, access, opt-out, and correction policies.</div>
-          <div className="p-3 rounded-xl border border-slate-800 bg-slate-950">Protect autonomy, privacy, and intellectual freedom.</div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-        <h3 className="text-xs uppercase tracking-widest text-cyan-400 font-bold mb-4">Infrastructure</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-950">
-            <h4 className="text-sm font-bold text-slate-200 mb-1">DePIN Nodes</h4>
-            <p className="text-sm text-slate-400">Distributed physical infrastructure nodes for resilient computation and sensing.</p>
-          </div>
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-950">
-            <h4 className="text-sm font-bold text-slate-200 mb-1">QVIREAX Quantum Network Research</h4>
-            <p className="text-sm text-slate-400">Experimental pathway for high-fidelity synchronization and secure distributed reasoning.</p>
-          </div>
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-950">
-            <h4 className="text-sm font-bold text-slate-200 mb-1">Governance/Audit Layer</h4>
-            <p className="text-sm text-slate-400">Policy, traceability, and accountability controls for system decisions.</p>
-          </div>
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-950">
-            <h4 className="text-sm font-bold text-slate-200 mb-1">Token/Reward Systems</h4>
-            <p className="text-sm text-slate-400">Incentive mechanics for contribution quality, transparency, and long-term alignment.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-          <h3 className="text-xs uppercase tracking-widest text-cyan-400 font-bold mb-4">Governance and Scientific Integrity</h3>
-          <ul className="space-y-2 text-sm text-slate-300">
-            {governanceBodies.map((body) => (
-              <li key={body} className="p-2 rounded-md border border-slate-800 bg-slate-950">{body}</li>
-            ))}
-          </ul>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-          <h3 className="text-xs uppercase tracking-widest text-cyan-400 font-bold mb-4">Legal and Compliance Framework</h3>
-          <ul className="space-y-2 text-sm text-slate-300">
-            {legalFramework.map((entry) => (
-              <li key={entry} className="p-2 rounded-md border border-slate-800 bg-slate-950">{entry}</li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-        <h3 className="text-xs uppercase tracking-widest text-cyan-400 font-bold mb-4">Decentralised Global Organisation Statements</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {decentralisedStatements.map((statement) => (
-            <div key={statement.title} className="p-3 rounded-xl border border-slate-800 bg-slate-950">
-              <h4 className="text-xs font-bold uppercase tracking-wide text-cyan-300 mb-1">{statement.title}</h4>
-              <p className="text-sm text-slate-300">{statement.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-          <h3 className="text-xs uppercase tracking-widest text-cyan-400 font-bold mb-4">Principles</h3>
+        <aside className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <h3 className="text-sm font-bold text-slate-100 mb-1">Recent Activity</h3>
+          <p className="text-xs text-slate-500 mb-4">Local dashboard events only; not Observer audit records.</p>
           <div className="space-y-3">
-            {operatingPrinciples.map((principle) => (
-              <div key={principle.title} className="p-3 rounded-xl border border-slate-800 bg-slate-950">
-                <h4 className="text-sm font-bold text-slate-200 mb-1">{principle.title}</h4>
-                <p className="text-sm text-slate-400">{principle.text}</p>
+            {activity.length === 0 && <div className="text-sm text-slate-600">No activity recorded.</div>}
+            {activity.map((entry) => (
+              <div key={entry.id} className="border-l-2 border-cyan-500/40 pl-3">
+                <div className="text-sm text-slate-300">{entry.message}</div>
+                <div className="text-[10px] text-slate-600 mt-1">{entry.timestamp}</div>
               </div>
             ))}
           </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-          <h3 className="text-xs uppercase tracking-widest text-cyan-400 font-bold mb-4">Participate</h3>
-          <div className="space-y-3">
-            {participationTracks.map((track) => (
-              <div key={track.title} className="p-3 rounded-xl border border-slate-800 bg-slate-950">
-                <h4 className="text-sm font-bold text-slate-200 mb-1">{track.title}</h4>
-                <p className="text-sm text-slate-400">{track.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        </aside>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-        <h3 className="text-xs uppercase tracking-widest text-cyan-400 font-bold mb-4">Reference Architecture</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {architectureLayers.map((layer) => (
-            <div key={layer.title} className="p-3 rounded-xl border border-slate-800 bg-slate-950">
-              <h4 className="text-sm font-bold text-slate-100">{layer.title}</h4>
-              <p className="text-xs text-cyan-300 mt-1">{layer.stack}</p>
-              <p className="text-sm text-slate-400 mt-1">{layer.detail}</p>
-            </div>
-          ))}
+      <section className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
+        <div className="text-[10px] uppercase tracking-widest text-red-400 font-bold mb-2">Production Blockers</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-sm text-slate-300">
+          <div className="rounded-lg border border-red-500/10 bg-slate-950 p-3">Authenticated Civilisation.One API</div>
+          <div className="rounded-lg border border-red-500/10 bg-slate-950 p-3">Durable user and project persistence</div>
+          <div className="rounded-lg border border-red-500/10 bg-slate-950 p-3">Authorization and governance enforcement</div>
+          <div className="rounded-lg border border-red-500/10 bg-slate-950 p-3">Live OIIIDS and Observer integration</div>
         </div>
-        <div className="mt-4 p-3 rounded-xl border border-slate-800 bg-slate-950">
-          <p className="text-xs text-slate-400">
-            Data flow: Browser/PWA -&gt; HTTPS JSON -&gt; Civilisation.One API -&gt; PostgreSQL and Worker pipelines, with evidence and large artifacts stored in S3-compatible object storage.
-          </p>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-6">
-        <h3 className="text-xs uppercase tracking-widest text-cyan-300 font-bold mb-3">Proposed Positioning Statement</h3>
-        <p className="text-sm text-cyan-100">
-          Civilisation One is an open scientific learning and collaboration ecosystem designed to help people learn, verify
-          knowledge, conduct research, develop talent, and contribute ethically to humanity's understanding of life,
-          consciousness, technology, and the universe.
-        </p>
       </section>
     </div>
   );
