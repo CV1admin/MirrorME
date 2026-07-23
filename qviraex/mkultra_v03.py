@@ -38,6 +38,28 @@ class MKultraRuntimeState:
     persistence_authorized: bool
 
 
+@dataclass(frozen=True)
+class RuntimeIntegrityAnchor:
+    signal_head_hash: str | None
+    signal_count: int
+    checkpoint_head_hash: str | None
+    checkpoint_count: int
+
+    def __post_init__(self) -> None:
+        for name in ("signal_count", "checkpoint_count"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError(f"{name} must be a non-negative integer")
+        for name in ("signal_head_hash", "checkpoint_head_hash"):
+            value = getattr(self, name)
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError(f"{name} must be a non-empty string or None")
+        if (self.signal_count == 0) != (self.signal_head_hash is None):
+            raise ValueError("signal anchor count and head hash are inconsistent")
+        if (self.checkpoint_count == 0) != (self.checkpoint_head_hash is None):
+            raise ValueError("checkpoint anchor count and head hash are inconsistent")
+
+
 class MKultraRuntime:
     """Local-first integration kernel for MKultra v0.3.
 
@@ -211,21 +233,35 @@ class MKultraRuntime:
         with self._transaction_lock:
             return tuple(self._checkpoints)
 
-    def verify_integrity(self) -> bool:
-        """Verify both volatile signal and checkpoint chains against live anchors."""
+    def integrity_anchor(self) -> RuntimeIntegrityAnchor:
+        """Capture trusted chain heads/counts for later truncation detection."""
 
         with self._transaction_lock:
-            signal_ok = self.signal_bus.verify_chain(
-                expected_head_hash=self.signal_bus.head_hash,
-                expected_length=self.signal_bus.sequence,
-            )
             checkpoint_head = (
                 self._checkpoints[-1].checkpoint_hash if self._checkpoints else None
             )
+            return RuntimeIntegrityAnchor(
+                signal_head_hash=self.signal_bus.head_hash,
+                signal_count=self.signal_bus.sequence,
+                checkpoint_head_hash=checkpoint_head,
+                checkpoint_count=len(self._checkpoints),
+            )
+
+    def verify_integrity(self, anchor: RuntimeIntegrityAnchor | None = None) -> bool:
+        """Verify linkage, and verify truncation/substitution when given an anchor."""
+
+        if anchor is not None and not isinstance(anchor, RuntimeIntegrityAnchor):
+            raise TypeError("anchor must be a RuntimeIntegrityAnchor or None")
+
+        with self._transaction_lock:
+            signal_ok = self.signal_bus.verify_chain(
+                expected_head_hash=(anchor.signal_head_hash if anchor else None),
+                expected_length=(anchor.signal_count if anchor else None),
+            )
             checkpoint_ok = ConsciousnessObserverMode.verify_checkpoint_chain(
                 self._checkpoints,
-                expected_head_hash=checkpoint_head,
-                expected_count=len(self._checkpoints),
+                expected_head_hash=(anchor.checkpoint_head_hash if anchor else None),
+                expected_count=(anchor.checkpoint_count if anchor else None),
             )
             return signal_ok and checkpoint_ok
 
