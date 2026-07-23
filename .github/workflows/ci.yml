@@ -26,11 +26,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Parse MKultra PowerShell updater
+      - name: Parse MirrorME PowerShell scripts
         shell: pwsh
         run: |
-          $source = Get-Content "scripts/update-mkultra-v0.3.ps1" -Raw
-          [void][scriptblock]::Create($source)
+          $paths = @(
+            "scripts/update-mkultra-v0.3.ps1",
+            "scripts/start-mirrorme.ps1",
+            "scripts/run-mirrorme.ps1"
+          )
+          foreach ($path in $paths) {
+            $source = Get-Content $path -Raw
+            [void][scriptblock]::Create($source)
+          }
       - run: npm ci
       - run: npm run check
       - run: python -m unittest discover -s tests -p "test_*.py" -v
