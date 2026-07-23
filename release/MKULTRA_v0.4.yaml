@@ -1,0 +1,72 @@
+release:
+  name: MKultra
+  version: 0.4.0
+  codename: Governed Thin Line
+  status: integration-development
+  created: 2026-07-23
+
+foundation:
+  repository: CV1admin/MirrorME
+  branch: feature/mkultra-v0.4-full-stack
+  inherits:
+    - MKultra v0.3 transactional runtime
+    - anchored signal and checkpoint integrity
+    - strict numeric and consent validation
+
+full_stack:
+  runtime: qviraex/mkultra_v04.py
+  claim_registry: qviraex/thin_line/claims.py
+  evolution_engine: qviraex/evolution/governed.py
+  local_service: local_bridge/v04_service.py
+  local_bridge: local_bridge/mkultra_v04_bridge.py
+  ui_route: /mkultra-v04
+  source_manifest: knowledge/mkultra-v0.4-source-manifest.json
+  model_file: ollama/Modelfile.mkultra-v0.4
+  updater: scripts/update-mkultra-v0.4.ps1
+
+capabilities:
+  - provenance-anchored Thin Line claim registry
+  - explicit epistemic-layer separation
+  - hash-linked evolution proposal chain
+  - deterministic evaluation metadata
+  - exact human approval gate
+  - inspectable change-packet export
+  - local bridge API
+  - browser governance console
+
+prohibited:
+  automatic_self_modification: true
+  direct_code_execution: true
+  direct_weight_update: true
+  direct_policy_update: true
+  direct_identity_update: true
+  automatic_persistence: true
+  external_actions: true
+  mythology_as_empirical_evidence: true
+
+local_runtime:
+  provider: ollama
+  base_model: qwen3:8b
+  model_name: mkultra:0.4
+  context_window: 32768
+  bridge_host: 127.0.0.1
+  bridge_port: 8765
+  ui_port: 3000
+
+release_gate:
+  production_ready: false
+  merge_allowed_after_ci: true
+  required_checks:
+    - PowerShell parser
+    - TypeScript typecheck
+    - Vite production build
+    - Python unit tests
+    - bridge service tests
+  remaining_requirements:
+    - audited RFC 8785 canonicalization
+    - real signature verification and trust roots
+    - encrypted durable storage with deletion policy
+    - concurrency and property-based testing
+    - authenticated role and reviewer binding
+    - independent security review
+    - benchmarked model and retrieval evaluation
