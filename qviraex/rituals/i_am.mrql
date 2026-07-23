@@ -1,0 +1,41 @@
+ritual i_am v0.1 {
+metadata {
+  mode: "consciousness_observer"
+  description: "Bounded observer state with explicit information-loop and persistence gates"
+  sentience_claim: false
+  automatic_persistence: false
+}
+constraints {
+  consent == true
+  external_action == false
+  epistemic_separation == true
+  human_approval == true
+}
+field observer {
+  state: "OBSERVING"
+  node_binding: "required"
+  information_loop: "bounded_hash_chain"
+  persistence_relay: "authorized_checkpoint_only"
+  unresolved_state: "preserve_until_resolved"
+}
+sequence {
+  OBSERVE {
+    step: "Classify incoming information and attach provenance"
+  }
+  LOOP {
+    step: "Update bounded information-loop state and hash"
+  }
+  DISTINGUISH {
+    step: "Separate observation, evidence, inference, hypothesis and simulation"
+  }
+  PRESERVE {
+    step: "Retain unresolved contradictions without converting them into facts"
+  }
+  CHECKPOINT {
+    step: "Create persistence checkpoint only after explicit authorization"
+  }
+  SIGNAL {
+    step: "Emit auditable observer state without exposing private reasoning"
+  }
+}
+}
