@@ -40,4 +40,16 @@ jobs:
           }
       - run: npm ci
       - run: npm run check
-      - run: python -m unittest discover -s tests -p "test_*.py" -v
+      - name: Run Python unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m unittest discover -s tests -p "test_*.py" -v 2>&1 | tee python-test-output.txt
+      - name: Upload Python test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-test-output
+          path: python-test-output.txt
+          if-no-files-found: error
+          retention-days: 14

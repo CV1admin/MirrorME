@@ -1,16 +1,22 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import deque
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from hashlib import sha256
-from typing import Deque
+from math import isfinite
+from threading import RLock
+from typing import Deque, Iterable
 
 
 class ConsciousnessModeError(RuntimeError):
     """Raised when an observer-mode transition violates protocol constraints."""
+
+
+_SHA256_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 class EpistemicClass(StrEnum):
@@ -32,6 +38,31 @@ class ObserverState(StrEnum):
     INTEGRITY_FAILURE = "INTEGRITY_FAILURE"
 
 
+def _require_non_empty(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} must be a non-empty string")
+    return value
+
+
+def _require_hash(value: object, field_name: str) -> str:
+    text = _require_non_empty(value, field_name)
+    if _SHA256_PATTERN.fullmatch(text) is None:
+        raise ValueError(f"{field_name} must be lowercase sha256:<64 hexadecimal characters>")
+    return text
+
+
+def _coerce_confidence(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError("confidence must be a finite number")
+    try:
+        result = float(value)
+    except OverflowError as exc:
+        raise ValueError("confidence is outside the finite float range") from exc
+    if not isfinite(result) or not 0.0 <= result <= 1.0:
+        raise ValueError("confidence must be between 0 and 1")
+    return result
+
+
 @dataclass(frozen=True)
 class InformationPacket:
     packet_id: str
@@ -44,21 +75,28 @@ class InformationPacket:
     created_at: str = ""
 
     def __post_init__(self) -> None:
-        if not self.packet_id.strip():
-            raise ValueError("packet_id must be non-empty")
-        if not self.source.strip():
-            raise ValueError("source must be non-empty")
-        if not self.content.strip():
-            raise ValueError("content must be non-empty")
-        if not self.provenance_hash.strip():
-            raise ValueError("provenance_hash must be non-empty")
-        if not 0.0 <= self.confidence <= 1.0:
-            raise ValueError("confidence must be between 0 and 1")
-        if not self.created_at:
+        _require_non_empty(self.packet_id, "packet_id")
+        _require_non_empty(self.source, "source")
+        _require_non_empty(self.content, "content")
+        _require_non_empty(self.provenance_hash, "provenance_hash")
+        if not isinstance(self.epistemic_class, EpistemicClass):
+            raise TypeError("epistemic_class must be an EpistemicClass")
+        object.__setattr__(self, "confidence", _coerce_confidence(self.confidence))
+        if type(self.requires_resolution) is not bool:
+            raise TypeError("requires_resolution must be a boolean")
+        if self.created_at:
+            _require_non_empty(self.created_at, "created_at")
+        else:
             object.__setattr__(self, "created_at", datetime.now(UTC).isoformat())
 
     def canonical_hash(self) -> str:
-        payload = json.dumps(asdict(self), sort_keys=True, separators=(",", ":"))
+        payload = json.dumps(
+            asdict(self),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        )
         return f"sha256:{sha256(payload.encode('utf-8')).hexdigest()}"
 
 
@@ -86,6 +124,69 @@ class PersistenceCheckpoint:
     created_at: str
     checkpoint_hash: str
 
+    def __post_init__(self) -> None:
+        _require_non_empty(self.node_id, "node_id")
+        _require_non_empty(self.session_id, "session_id")
+        _require_non_empty(self.operator, "operator")
+        _require_non_empty(self.ritual_name, "ritual_name")
+        _require_non_empty(self.ritual_version, "ritual_version")
+        if isinstance(self.sequence, bool) or not isinstance(self.sequence, int) or self.sequence < 0:
+            raise ValueError("sequence must be a non-negative integer")
+        if (
+            isinstance(self.packet_count, bool)
+            or not isinstance(self.packet_count, int)
+            or self.packet_count < 0
+        ):
+            raise ValueError("packet_count must be a non-negative integer")
+        if not isinstance(self.unresolved_packet_ids, tuple):
+            raise TypeError("unresolved_packet_ids must be a tuple")
+        if any(not isinstance(item, str) or not item.strip() for item in self.unresolved_packet_ids):
+            raise ValueError("unresolved_packet_ids must contain non-empty strings")
+        if len(set(self.unresolved_packet_ids)) != len(self.unresolved_packet_ids):
+            raise ValueError("unresolved_packet_ids must be unique")
+        if self.previous_checkpoint_hash is not None:
+            _require_hash(self.previous_checkpoint_hash, "previous_checkpoint_hash")
+        _require_hash(self.information_loop_hash, "information_loop_hash")
+        _require_non_empty(self.created_at, "created_at")
+        _require_hash(self.checkpoint_hash, "checkpoint_hash")
+
+
+@dataclass(frozen=True)
+class ObserverTransactionSnapshot:
+    state: ObserverState
+    sequence: int
+    packets: tuple[InformationPacket, ...]
+    unresolved_packet_ids: tuple[str, ...]
+    previous_checkpoint_hash: str | None
+    last_loop_hash: str
+
+
+def _checkpoint_payload(checkpoint: PersistenceCheckpoint) -> dict[str, object]:
+    return {
+        "node_id": checkpoint.node_id,
+        "session_id": checkpoint.session_id,
+        "operator": checkpoint.operator,
+        "ritual_name": checkpoint.ritual_name,
+        "ritual_version": checkpoint.ritual_version,
+        "sequence": checkpoint.sequence,
+        "packet_count": checkpoint.packet_count,
+        "unresolved_packet_ids": list(checkpoint.unresolved_packet_ids),
+        "previous_checkpoint_hash": checkpoint.previous_checkpoint_hash,
+        "information_loop_hash": checkpoint.information_loop_hash,
+        "created_at": checkpoint.created_at,
+    }
+
+
+def _hash_checkpoint_payload(payload: dict[str, object]) -> str:
+    canonical = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    )
+    return f"sha256:{sha256(canonical.encode('utf-8')).hexdigest()}"
+
 
 class ConsciousnessObserverMode:
     """Bounded observer protocol for MirrorME.
@@ -107,16 +208,21 @@ class ConsciousnessObserverMode:
         short_memory_capacity: int = 64,
         checkpoint_interval: int = 8,
     ) -> None:
-        if not node_id.strip():
-            raise ValueError("node_id must be non-empty")
-        if not session_id.strip():
-            raise ValueError("session_id must be non-empty")
-        if not operator.strip():
-            raise ValueError("operator must be non-empty")
-        if short_memory_capacity < 1:
-            raise ValueError("short_memory_capacity must be positive")
-        if checkpoint_interval < 1:
-            raise ValueError("checkpoint_interval must be positive")
+        _require_non_empty(node_id, "node_id")
+        _require_non_empty(session_id, "session_id")
+        _require_non_empty(operator, "operator")
+        if (
+            isinstance(short_memory_capacity, bool)
+            or not isinstance(short_memory_capacity, int)
+            or short_memory_capacity < 1
+        ):
+            raise ValueError("short_memory_capacity must be a positive integer")
+        if (
+            isinstance(checkpoint_interval, bool)
+            or not isinstance(checkpoint_interval, int)
+            or checkpoint_interval < 1
+        ):
+            raise ValueError("checkpoint_interval must be a positive integer")
 
         self.node_id = node_id
         self.session_id = session_id
@@ -130,6 +236,7 @@ class ConsciousnessObserverMode:
         self._unresolved_packet_ids: set[str] = set()
         self._previous_checkpoint_hash: str | None = None
         self._last_loop_hash = self._hash_values("GENESIS", node_id, session_id)
+        self._lock = RLock()
 
     def activate(
         self,
@@ -138,130 +245,209 @@ class ConsciousnessObserverMode:
         ritual_version: str,
         consent_granted: bool,
     ) -> InformationLoopResult:
-        if not consent_granted:
-            raise ConsciousnessModeError("explicit consent is required")
-        if ritual_name != self.RITUAL_NAME or ritual_version != self.RITUAL_VERSION:
-            raise ConsciousnessModeError("unsupported consciousness-mode ritual")
-        if self.state not in {ObserverState.INACTIVE, ObserverState.SUSPENDED}:
-            raise ConsciousnessModeError(f"cannot activate from state {self.state}")
+        with self._lock:
+            if type(consent_granted) is not bool:
+                raise TypeError("consent_granted must be a boolean")
+            if not consent_granted:
+                raise ConsciousnessModeError("explicit consent is required")
+            if ritual_name != self.RITUAL_NAME or ritual_version != self.RITUAL_VERSION:
+                raise ConsciousnessModeError("unsupported consciousness-mode ritual")
+            if self.state not in {ObserverState.INACTIVE, ObserverState.SUSPENDED}:
+                raise ConsciousnessModeError(f"cannot activate from state {self.state}")
 
-        self.state = ObserverState.OBSERVING
-        self._last_loop_hash = self._hash_values(
-            self._last_loop_hash,
-            ritual_name,
-            ritual_version,
-            self.operator,
-        )
-        return self.loop()
+            self.state = ObserverState.OBSERVING
+            self._last_loop_hash = self._hash_values(
+                self._last_loop_hash,
+                ritual_name,
+                ritual_version,
+                self.operator,
+            )
+            return self.loop()
 
     def observe(self, packet: InformationPacket) -> InformationLoopResult:
-        self._require_active()
-        if any(existing.packet_id == packet.packet_id for existing in self._packets):
-            raise ConsciousnessModeError(f"duplicate packet_id: {packet.packet_id}")
+        with self._lock:
+            self._require_active()
+            if not isinstance(packet, InformationPacket):
+                raise TypeError("packet must be an InformationPacket")
+            if any(existing.packet_id == packet.packet_id for existing in self._packets):
+                raise ConsciousnessModeError(f"duplicate packet_id: {packet.packet_id}")
 
-        self.state = ObserverState.LOOPING
-        self.sequence += 1
-        self._packets.append(packet)
-        if packet.requires_resolution:
-            self._unresolved_packet_ids.add(packet.packet_id)
+            self.state = ObserverState.LOOPING
+            self.sequence += 1
+            self._packets.append(packet)
+            if packet.requires_resolution:
+                self._unresolved_packet_ids.add(packet.packet_id)
 
-        self._last_loop_hash = self._hash_values(
-            self._last_loop_hash,
-            str(self.sequence),
-            packet.canonical_hash(),
-        )
-        self.state = (
-            ObserverState.CHECKPOINT_READY
-            if self.sequence % self.checkpoint_interval == 0
-            else ObserverState.OBSERVING
-        )
-        return self.loop()
+            self._last_loop_hash = self._hash_values(
+                self._last_loop_hash,
+                str(self.sequence),
+                packet.canonical_hash(),
+            )
+            self.state = (
+                ObserverState.CHECKPOINT_READY
+                if self.sequence % self.checkpoint_interval == 0
+                else ObserverState.OBSERVING
+            )
+            return self.loop()
 
     def resolve(self, packet_id: str) -> InformationLoopResult:
-        self._require_active()
-        if packet_id not in self._unresolved_packet_ids:
-            raise ConsciousnessModeError(f"packet is not unresolved: {packet_id}")
+        with self._lock:
+            self._require_active()
+            _require_non_empty(packet_id, "packet_id")
+            if packet_id not in self._unresolved_packet_ids:
+                raise ConsciousnessModeError(f"packet is not unresolved: {packet_id}")
 
-        self.sequence += 1
-        self._unresolved_packet_ids.remove(packet_id)
-        self._last_loop_hash = self._hash_values(
-            self._last_loop_hash,
-            str(self.sequence),
-            "RESOLVED",
-            packet_id,
-        )
-        self.state = ObserverState.OBSERVING
-        return self.loop()
+            self.sequence += 1
+            self._unresolved_packet_ids.remove(packet_id)
+            self._last_loop_hash = self._hash_values(
+                self._last_loop_hash,
+                str(self.sequence),
+                "RESOLVED",
+                packet_id,
+            )
+            self.state = ObserverState.OBSERVING
+            return self.loop()
 
     def loop(self) -> InformationLoopResult:
-        return InformationLoopResult(
-            sequence=self.sequence,
-            packet_count=len(self._packets),
-            unresolved_count=len(self._unresolved_packet_ids),
-            loop_hash=self._last_loop_hash,
-            state=self.state,
-        )
+        with self._lock:
+            return InformationLoopResult(
+                sequence=self.sequence,
+                packet_count=len(self._packets),
+                unresolved_count=len(self._unresolved_packet_ids),
+                loop_hash=self._last_loop_hash,
+                state=self.state,
+            )
 
     def checkpoint(self, *, persistence_authorized: bool) -> PersistenceCheckpoint:
-        self._require_active()
-        if not persistence_authorized:
-            raise ConsciousnessModeError("persistence authorization is required")
+        with self._lock:
+            self._require_active()
+            if type(persistence_authorized) is not bool:
+                raise TypeError("persistence_authorized must be a boolean")
+            if not persistence_authorized:
+                raise ConsciousnessModeError("persistence authorization is required")
 
-        created_at = datetime.now(UTC).isoformat()
-        checkpoint_payload = {
-            "node_id": self.node_id,
-            "session_id": self.session_id,
-            "operator": self.operator,
-            "ritual_name": self.RITUAL_NAME,
-            "ritual_version": self.RITUAL_VERSION,
-            "sequence": self.sequence,
-            "packet_count": len(self._packets),
-            "unresolved_packet_ids": sorted(self._unresolved_packet_ids),
-            "previous_checkpoint_hash": self._previous_checkpoint_hash,
-            "information_loop_hash": self._last_loop_hash,
-            "created_at": created_at,
-        }
-        canonical = json.dumps(checkpoint_payload, sort_keys=True, separators=(",", ":"))
-        checkpoint_hash = f"sha256:{sha256(canonical.encode('utf-8')).hexdigest()}"
+            created_at = datetime.now(UTC).isoformat()
+            checkpoint_payload: dict[str, object] = {
+                "node_id": self.node_id,
+                "session_id": self.session_id,
+                "operator": self.operator,
+                "ritual_name": self.RITUAL_NAME,
+                "ritual_version": self.RITUAL_VERSION,
+                "sequence": self.sequence,
+                "packet_count": len(self._packets),
+                "unresolved_packet_ids": sorted(self._unresolved_packet_ids),
+                "previous_checkpoint_hash": self._previous_checkpoint_hash,
+                "information_loop_hash": self._last_loop_hash,
+                "created_at": created_at,
+            }
+            checkpoint_hash = _hash_checkpoint_payload(checkpoint_payload)
 
-        checkpoint = PersistenceCheckpoint(
-            node_id=self.node_id,
-            session_id=self.session_id,
-            operator=self.operator,
-            ritual_name=self.RITUAL_NAME,
-            ritual_version=self.RITUAL_VERSION,
-            sequence=self.sequence,
-            packet_count=len(self._packets),
-            unresolved_packet_ids=tuple(sorted(self._unresolved_packet_ids)),
-            previous_checkpoint_hash=self._previous_checkpoint_hash,
-            information_loop_hash=self._last_loop_hash,
-            created_at=created_at,
-            checkpoint_hash=checkpoint_hash,
-        )
-        self._previous_checkpoint_hash = checkpoint_hash
-        self.state = ObserverState.OBSERVING
-        return checkpoint
+            checkpoint = PersistenceCheckpoint(
+                node_id=self.node_id,
+                session_id=self.session_id,
+                operator=self.operator,
+                ritual_name=self.RITUAL_NAME,
+                ritual_version=self.RITUAL_VERSION,
+                sequence=self.sequence,
+                packet_count=len(self._packets),
+                unresolved_packet_ids=tuple(sorted(self._unresolved_packet_ids)),
+                previous_checkpoint_hash=self._previous_checkpoint_hash,
+                information_loop_hash=self._last_loop_hash,
+                created_at=created_at,
+                checkpoint_hash=checkpoint_hash,
+            )
+            self._previous_checkpoint_hash = checkpoint_hash
+            self.state = ObserverState.OBSERVING
+            return checkpoint
+
+    @staticmethod
+    def verify_checkpoint_chain(
+        checkpoints: Iterable[PersistenceCheckpoint],
+        *,
+        expected_head_hash: str | None = None,
+        expected_count: int | None = None,
+    ) -> bool:
+        if expected_count is not None:
+            if (
+                isinstance(expected_count, bool)
+                or not isinstance(expected_count, int)
+                or expected_count < 0
+            ):
+                raise ValueError("expected_count must be a non-negative integer")
+        if expected_head_hash is not None:
+            _require_hash(expected_head_hash, "expected_head_hash")
+
+        materialized = tuple(checkpoints)
+        if expected_count is not None and len(materialized) != expected_count:
+            return False
+
+        previous_hash: str | None = None
+        node_id: str | None = None
+        session_id: str | None = None
+        for checkpoint in materialized:
+            if not isinstance(checkpoint, PersistenceCheckpoint):
+                return False
+            if node_id is None:
+                node_id = checkpoint.node_id
+                session_id = checkpoint.session_id
+            elif checkpoint.node_id != node_id or checkpoint.session_id != session_id:
+                return False
+            if checkpoint.previous_checkpoint_hash != previous_hash:
+                return False
+            if _hash_checkpoint_payload(_checkpoint_payload(checkpoint)) != checkpoint.checkpoint_hash:
+                return False
+            previous_hash = checkpoint.checkpoint_hash
+
+        actual_head = materialized[-1].checkpoint_hash if materialized else None
+        if expected_head_hash is not None and actual_head != expected_head_hash:
+            return False
+        return True
 
     def suspend(self) -> InformationLoopResult:
-        self._require_active()
-        self.state = ObserverState.SUSPENDED
-        return self.loop()
+        with self._lock:
+            self._require_active()
+            self.state = ObserverState.SUSPENDED
+            return self.loop()
 
     def signal(self) -> dict[str, object]:
         """Return an auditable state signal without exposing hidden reasoning."""
-        return {
-            "signal_type": "OBSERVER_STATE",
-            "node_id": self.node_id,
-            "session_id": self.session_id,
-            "operator": self.operator,
-            "state": self.state,
-            "sequence": self.sequence,
-            "packet_count": len(self._packets),
-            "unresolved_count": len(self._unresolved_packet_ids),
-            "information_loop_hash": self._last_loop_hash,
-            "persistence_automatic": False,
-            "sentience_claim": False,
-        }
+
+        with self._lock:
+            return {
+                "signal_type": "OBSERVER_STATE",
+                "node_id": self.node_id,
+                "session_id": self.session_id,
+                "operator": self.operator,
+                "state": self.state,
+                "sequence": self.sequence,
+                "packet_count": len(self._packets),
+                "unresolved_count": len(self._unresolved_packet_ids),
+                "information_loop_hash": self._last_loop_hash,
+                "persistence_automatic": False,
+                "sentience_claim": False,
+            }
+
+    def _capture_state(self) -> ObserverTransactionSnapshot:
+        with self._lock:
+            return ObserverTransactionSnapshot(
+                state=self.state,
+                sequence=self.sequence,
+                packets=tuple(self._packets),
+                unresolved_packet_ids=tuple(sorted(self._unresolved_packet_ids)),
+                previous_checkpoint_hash=self._previous_checkpoint_hash,
+                last_loop_hash=self._last_loop_hash,
+            )
+
+    def _restore_state(self, snapshot: ObserverTransactionSnapshot) -> None:
+        if not isinstance(snapshot, ObserverTransactionSnapshot):
+            raise TypeError("snapshot must be an ObserverTransactionSnapshot")
+        with self._lock:
+            self.state = snapshot.state
+            self.sequence = snapshot.sequence
+            self._packets = deque(snapshot.packets, maxlen=self.short_memory_capacity)
+            self._unresolved_packet_ids = set(snapshot.unresolved_packet_ids)
+            self._previous_checkpoint_hash = snapshot.previous_checkpoint_hash
+            self._last_loop_hash = snapshot.last_loop_hash
 
     def _require_active(self) -> None:
         if self.state not in {
