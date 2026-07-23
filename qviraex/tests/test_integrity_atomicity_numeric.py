@@ -21,6 +21,14 @@ from qviraex.vireax.consciousness_mode import (
     InformationPacket,
 )
 
+HUGE_INT = 10**400
+
+
+def case_name(value: object) -> str:
+    if isinstance(value, int) and not isinstance(value, bool):
+        return f"int(bits={value.bit_length()}, sign={-1 if value < 0 else 1})"
+    return f"{type(value).__name__}:{value!r}"
+
 
 def make_identity() -> VerifiedIdentityContext:
     return VerifiedIdentityContext(
@@ -87,7 +95,6 @@ class HashChainIntegrityTests(unittest.TestCase):
                 expected_length=anchor_length,
             )
         )
-
         snapshot[0].payload["nested"]["value"] = 99
         self.assertFalse(
             CognitiveSignalBus.verify_snapshot(
@@ -265,12 +272,12 @@ class NumericAndConsentBoundaryTests(unittest.TestCase):
             float("inf"),
             float("-inf"),
             float("nan"),
-            10**10000,
+            HUGE_INT,
         )
         verifier = IdentityCapsuleVerifier(lambda _: True)
 
         for value in invalid_values:
-            with self.subTest(value=repr(value)[:80]):
+            with self.subTest(value=case_name(value)):
                 capsule = valid_capsule()
                 expected_hash = str(capsule["capsule_id"])
                 capsule["consent_active"] = value
@@ -278,8 +285,8 @@ class NumericAndConsentBoundaryTests(unittest.TestCase):
                     verifier.verify(capsule, expected_document_hash=expected_hash)
 
     def test_session_authority_rejects_numeric_boolean_substitutes(self) -> None:
-        for value in (0, 1, 0.0, 1.0, float("inf"), 10**10000):
-            with self.subTest(value=repr(value)[:80]):
+        for value in (0, 1, 0.0, 1.0, float("inf"), HUGE_INT):
+            with self.subTest(value=case_name(value)):
                 with self.assertRaisesRegex(TypeError, "persistence_authorized"):
                     AuthorizedSession(
                         session_id="SESSION",
@@ -303,7 +310,7 @@ class NumericAndConsentBoundaryTests(unittest.TestCase):
         )
 
         for value in ("false", 0, 1, 1.0):
-            with self.subTest(value=value):
+            with self.subTest(value=case_name(value)):
                 with self.assertRaisesRegex(TypeError, "persistence_authorized"):
                     observer.checkpoint(persistence_authorized=value)  # type: ignore[arg-type]
 
@@ -326,10 +333,10 @@ class NumericAndConsentBoundaryTests(unittest.TestCase):
             float("inf"),
             float("-inf"),
             float("nan"),
-            10**10000,
+            HUGE_INT,
         )
         for value in invalid_values:
-            with self.subTest(value=repr(value)[:80]):
+            with self.subTest(value=case_name(value)):
                 with self.assertRaises((TypeError, ValueError)):
                     InformationPacket(
                         packet_id="PACKET-BAD",
@@ -351,7 +358,7 @@ class NumericAndConsentBoundaryTests(unittest.TestCase):
                 content="overflow candidate",
                 source="unit-test",
                 epistemic_class=EpistemicClass.HYPOTHESIS,
-                confidence=10**10000,
+                confidence=HUGE_INT,
                 provenance_hash="sha256:overflow",
             )
 
