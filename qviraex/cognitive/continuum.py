@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter, deque
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from math import isfinite
 from typing import Deque
 from uuid import uuid4
 
@@ -44,8 +45,14 @@ class CognitiveContinuum:
         capacity: int = 128,
         spark_ttl_seconds: int = 3600,
     ) -> None:
-        if capacity < 4:
-            raise ValueError("capacity must be at least 4")
+        if isinstance(capacity, bool) or not isinstance(capacity, int) or capacity < 4:
+            raise ValueError("capacity must be an integer of at least 4")
+        if (
+            isinstance(spark_ttl_seconds, bool)
+            or not isinstance(spark_ttl_seconds, int)
+            or spark_ttl_seconds <= 0
+        ):
+            raise ValueError("spark_ttl_seconds must be a positive integer")
         self.signal_bus = signal_bus
         self.capacity = capacity
         self.spark_ttl_seconds = spark_ttl_seconds
@@ -69,17 +76,26 @@ class CognitiveContinuum:
         epistemic_class: EpistemicClass,
         confidence: float,
     ) -> ShortMemoryItem:
-        if not content.strip():
+        if not isinstance(content, str) or not content.strip():
             raise ValueError("content must be non-empty")
-        if not 0.0 <= confidence <= 1.0:
+        if not isinstance(epistemic_class, EpistemicClass):
+            raise TypeError("epistemic_class must be an EpistemicClass")
+        if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
+            raise TypeError("confidence must be a finite number")
+        confidence_value = float(confidence)
+        if not isfinite(confidence_value) or not 0.0 <= confidence_value <= 1.0:
             raise ValueError("confidence must be between 0 and 1")
+        if not isinstance(tags, tuple):
+            raise TypeError("tags must be a tuple")
+        if any(not isinstance(tag, str) for tag in tags):
+            raise TypeError("all tags must be strings")
 
         item = ShortMemoryItem(
             item_id=str(uuid4()),
             content=content,
             tags=tuple(sorted({tag.strip().lower() for tag in tags if tag.strip()})),
             epistemic_class=epistemic_class,
-            confidence=confidence,
+            confidence=confidence_value,
             created_at=datetime.now(UTC).isoformat(),
         )
         self._memory.append(item)
@@ -95,6 +111,12 @@ class CognitiveContinuum:
         return item
 
     def detect_pattern(self, *, minimum_occurrences: int = 2) -> tuple[str, ...]:
+        if (
+            isinstance(minimum_occurrences, bool)
+            or not isinstance(minimum_occurrences, int)
+            or minimum_occurrences < 2
+        ):
+            raise ValueError("minimum_occurrences must be an integer of at least 2")
         counts = Counter(tag for item in self._memory for tag in item.tags)
         patterns = tuple(sorted(tag for tag, count in counts.items() if count >= minimum_occurrences))
         if patterns:
