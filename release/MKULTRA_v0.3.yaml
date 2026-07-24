@@ -1,0 +1,58 @@
+release:
+  name: MKultra
+  version: 0.3.0
+  codename: Persistent Mirror
+  status: integration-development
+  created: 2026-07-23
+
+foundation:
+  repository: CV1admin/MirrorME
+  branch: feature/mkultra-v0.3-full-stack
+  observer_source_branch: feature/consciousness-observer-mode
+
+existence_modules:
+  - id: EX-001
+    name: Dream Mode
+    version: 0.1.0
+    implementation: scaffolded
+  - id: EX-002
+    name: Imagination Mode
+    version: 0.1.0
+    implementation: scaffolded
+  - id: EX-003
+    name: Identity Capsule
+    version: 0.1.0
+    implementation: scaffolded
+  - id: EX-004
+    name: Cognitive Continuum
+    version: 0.1.0
+    implementation: scaffolded
+  - id: EX-005
+    name: Consciousness Observer Mode
+    version: 0.1.0
+    implementation: implemented
+
+safety:
+  sentience_claim: false
+  automatic_persistence: false
+  direct_weight_update: false
+  direct_policy_update: false
+  external_actions: false
+  human_approval_required: true
+  provenance_required: true
+
+local_runtime:
+  provider: ollama
+  base_model: qwen3:8b
+  model_name: mkultra:0.3
+  context_window: 32768
+  update_script: scripts/update-mkultra-v0.3.ps1
+
+release_gate:
+  production_ready: false
+  merge_allowed_after_ci: true
+  remaining_requirements:
+    - cryptographic signature verification for identity capsules
+    - encrypted durable continuum storage
+    - provider-backed multi-context execution
+    - property and concurrency tests

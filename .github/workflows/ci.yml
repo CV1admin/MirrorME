@@ -1,0 +1,68 @@
+name: MirrorME CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - codex/resolve-local-mirrorme-issues
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirrorme-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Parse MirrorME PowerShell scripts
+        shell: pwsh
+        run: |
+          $paths = @(
+            "scripts/update-mkultra-v0.3.ps1",
+            "scripts/start-mirrorme.ps1",
+            "scripts/run-mirrorme.ps1",
+            "scripts/update-mkultra-v0.4.ps1",
+            "scripts/start-mkultra-v0.4.ps1",
+            "scripts/run-mkultra-v0.4.ps1"
+          )
+          foreach ($path in $paths) {
+            $source = Get-Content $path -Raw
+            [void][scriptblock]::Create($source)
+          }
+      - name: Validate v0.4 metadata and Python syntax
+        shell: bash
+        run: |
+          python -m json.tool knowledge/mkultra-v0.4-source-manifest.json >/dev/null
+          python -m py_compile \
+            qviraex/thin_line/claims.py \
+            qviraex/evolution/governed.py \
+            qviraex/mkultra_v04.py \
+            local_bridge/v04_service.py \
+            local_bridge/mkultra_v04_bridge.py
+      - run: npm ci
+      - run: npm run check
+      - name: Run Python unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m unittest discover -s tests -p "test_*.py" -v 2>&1 | tee python-test-output.txt
+      - name: Upload Python test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-test-output
+          path: python-test-output.txt
+          if-no-files-found: error
+          retention-days: 14

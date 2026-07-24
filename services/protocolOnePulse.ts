@@ -12,7 +12,7 @@ export type PulseHandler = (state: PulseState) => void;
 export class ProtocolOnePulse {
   private hz: number;
   private periodMs: number;
-  private timer: ReturnType<typeof window.setTimeout> | null = null;
+  private timer: number | null = null;
   private tick = 0;
   private expected = 0;
   private running = false;

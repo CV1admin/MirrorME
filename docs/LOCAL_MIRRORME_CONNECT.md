@@ -23,7 +23,7 @@ Install Ollama from the official Ollama installer for your operating system.
 Then pull a model:
 
 ```bash
-ollama pull llama3.1:8b
+ollama pull mirrorme
 ```
 
 Optional smaller model:
@@ -115,13 +115,20 @@ http://localhost:3000/#/mirrorme
 
 ## 5. Configure the browser UI for local mode
 
-Open browser DevTools Console and run:
+Open **Settings → Inference Model**, select **Ollama**, and use:
+
+```text
+Bridge endpoint: http://localhost:8765
+Model: mirrorme
+```
+
+The Settings page also provides a one-click local-default reset. The following DevTools command is only a manual fallback:
 
 ```js
 localStorage.setItem('mirrorme_model_config', JSON.stringify({
   provider: 'ollama',
   ollamaEndpoint: 'http://localhost:8765',
-  ollamaModel: 'llama3.1:8b'
+  ollamaModel: 'mirrorme'
 }));
 location.reload();
 ```
@@ -136,7 +143,7 @@ The chat panel will now send messages to the local bridge.
 curl -N http://localhost:8765/api/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "model":"llama3.1:8b",
+    "model":"mirrorme",
     "stream":true,
     "messages":[
       {"role":"system","content":"You are MirrorME local runtime. Answer clearly."},
@@ -179,18 +186,18 @@ ollama list
 Pull the configured model:
 
 ```bash
-ollama pull llama3.1:8b
+ollama pull mirrorme
 ```
 
 ### Browser still uses Gemini
 
-Reset the local config:
+Use **Settings → Use Local MirrorME Defaults**, or reset the local config manually:
 
 ```js
 localStorage.setItem('mirrorme_model_config', JSON.stringify({
   provider: 'ollama',
   ollamaEndpoint: 'http://localhost:8765',
-  ollamaModel: 'llama3.1:8b'
+  ollamaModel: 'mirrorme'
 }));
 location.reload();
 ```
@@ -212,8 +219,29 @@ Do not point the browser directly at Ollama unless your local Ollama CORS settin
 ```text
 Local bridge:       added
 Ollama proxy:       added
-Browser config:     localStorage-based
+Browser config:     Settings UI with localStorage persistence
 Cloud dependency:   none for local route
-Persistent memory:  not added here
-Identity handshake: not added here
+Persistent memory:  disabled; explicit policy approval gate added
+Session handshake:  Settings UI + local bridge v0.2
+Authentication:      not provided by the local handshake
+Bridge tests:        automated with Python unittest
 ```
+
+
+---
+
+## Startup scripts
+
+Windows PowerShell:
+
+```powershell
+./scripts/start-mirrorme.ps1
+```
+
+Linux/macOS:
+
+```bash
+sh scripts/start-mirrorme.sh
+```
+
+The scripts verify Ollama and Python, pull the configured model if missing, and start the localhost bridge.

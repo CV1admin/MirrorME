@@ -124,16 +124,29 @@ Start Ollama:
 ollama serve
 ```
 
-Pull a local model:
+Build the canonical MirrorME persona on Qwen 3:
 
 ```bash
-ollama pull llama3.1:8b
+ollama pull qwen3:8b
+ollama create mirrorme -f ollama/Modelfile
 ```
 
-Start the MirrorME local bridge:
+The Modelfile embeds the MirrorME manifesto as canonical persona identity. Its epistemic discipline still distinguishes internal framework axioms from externally established empirical claims.
+
+Start the MirrorME local bridge directly:
 
 ```bash
-python local_bridge/mirrorme_bridge.py
+python local_bridge/mirrorme_bridge.py --model mirrorme
+```
+
+Or use the startup scripts:
+
+```powershell
+./scripts/start-mirrorme.ps1
+```
+
+```bash
+sh scripts/start-mirrorme.sh
 ```
 
 Check bridge health:
@@ -159,7 +172,7 @@ The chat service now defaults to the local bridge:
 ```text
 provider: ollama
 endpoint: http://localhost:8765
-model: llama3.1:8b
+model: mirrorme
 ```
 
 Full guide:
@@ -423,6 +436,8 @@ Dashboard telemetry is generated client-side and must be treated as simulated un
 - Declared metrics are hypotheses until connected to verified instrumentation.
 - GPT/OpenAI access must run through a backend or trusted local runtime only.
 - Local MirrorME bridge must stay bound to localhost unless explicitly secured.
+- The local handshake is a runtime readiness check, not cryptographic authentication.
+- Persistent memory remains disabled until explicit consent, retention, and deletion rules are implemented.
 
 ---
 
