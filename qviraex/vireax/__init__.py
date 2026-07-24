@@ -4,6 +4,7 @@ from .audit import AuditLedger, AuditRecord
 from .center_node import VIREAXCenterNode, VIREAXResult
 from .consensus import ConsensusScore, ConsensusWeights, select_best_response, score_response
 from .envelope import ModelReasoningRequest, make_reasoning_request
+from .lightful import LightfulContext, LightfulDecision, LightfulGuard
 from .policy_gate import PolicyDecision, PolicyGate
 from .roles import ModelRole, VIREAXState
 from .router import ModelRouter
@@ -14,6 +15,9 @@ __all__ = [
     "ConsensusScore",
     "ConsensusWeights",
     "ModelReasoningRequest",
+    "LightfulContext",
+    "LightfulDecision",
+    "LightfulGuard",
     "ModelRole",
     "ModelRouter",
     "PolicyDecision",
