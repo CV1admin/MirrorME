@@ -7,6 +7,7 @@ from .adapters import AdapterEnvelope, AdapterResult
 from .audit import AuditLedger
 from .consensus import ConsensusScore, ConsensusWeights, score_response, select_best_response
 from .envelope import make_reasoning_request
+from .lightful import LightfulContext, LightfulDecision, LightfulGuard
 from .policy_gate import PolicyGate
 from .roles import ModelRole, VIREAXState
 from .router import ModelRouter
@@ -25,6 +26,7 @@ class VIREAXResult:
     next_action: str
     audit_hash: str
     responses: tuple[dict[str, Any], ...] = ()
+    lightful_decision: dict[str, Any] | None = None
 
 
 @dataclass
@@ -32,8 +34,17 @@ class VIREAXCenterNode:
     router: ModelRouter
     policy_gate: PolicyGate = field(default_factory=PolicyGate)
     audit_ledger: AuditLedger = field(default_factory=AuditLedger)
+    lightful_guard: LightfulGuard = field(default_factory=LightfulGuard)
 
-    def run(self, *, session_id: str, operator: str, task: str, model_roles: dict[str, str]) -> VIREAXResult:
+    def run(
+        self,
+        *,
+        session_id: str,
+        operator: str,
+        task: str,
+        model_roles: dict[str, str],
+        lightful_context: LightfulContext | None = None,
+    ) -> VIREAXResult:
         current_state = VIREAXState.INIT
         for next_state in [
             VIREAXState.OPERATOR_AUTH,
@@ -59,6 +70,30 @@ class VIREAXCenterNode:
         if not policy.allowed:
             record = self.audit_ledger.commit({"session_id": session_id, "decision": "POLICY_BLOCK", "reason": policy.reason})
             return VIREAXResult(session_id=session_id, state=current_state, accepted_points=(), rejected_points=(policy.reason,), unresolved_points=(), evidence_level=0.0, risk_level=1.0, next_action="STOP", audit_hash=record.hash_value)
+
+        lightful_decision: LightfulDecision | None = None
+        if lightful_context is not None:
+            lightful_decision = self.lightful_guard.evaluate(lightful_context)
+            if lightful_decision.status in {"halt_decision", "seek_consent"}:
+                record = self.audit_ledger.commit(
+                    {
+                        "session_id": session_id,
+                        "decision": "LIGHTFUL_BLOCK",
+                        "lightful": lightful_decision.as_dict(),
+                    }
+                )
+                return VIREAXResult(
+                    session_id=session_id,
+                    state=current_state,
+                    accepted_points=(),
+                    rejected_points=(lightful_decision.rationale,),
+                    unresolved_points=lightful_decision.unresolved_tensions,
+                    evidence_level=0.0,
+                    risk_level=1.0,
+                    next_action=lightful_decision.status.upper(),
+                    audit_hash=record.hash_value,
+                    lightful_decision=lightful_decision.as_dict(),
+                )
 
         responses = self._dispatch_models(session_id=session_id, task=task, model_roles=model_roles, operator=operator)
         current_state = VIREAXState.DISPATCH
@@ -87,6 +122,7 @@ class VIREAXCenterNode:
             "confidence": best.final_weight if best else 0.0,
             "human_approval": True,
             "secrets_logged": False,
+            "lightful": lightful_decision.as_dict() if lightful_decision else {"applied": False},
         }
         record = self.audit_ledger.commit(payload)
         return VIREAXResult(
@@ -100,6 +136,7 @@ class VIREAXCenterNode:
             next_action="COMMIT_AUDIT",
             audit_hash=record.hash_value,
             responses=tuple(response.__dict__ for response in responses),
+            lightful_decision=lightful_decision.as_dict() if lightful_decision else None,
         )
 
     def _dispatch_models(self, *, session_id: str, task: str, model_roles: dict[str, str], operator: str) -> list[AdapterResult]:
