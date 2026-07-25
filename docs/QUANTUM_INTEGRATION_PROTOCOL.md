@@ -31,7 +31,7 @@ Required fields include:
 - complete OpenQASM 2.0 or 3.0 program;
 - declared qubit count, mode, provider, backend, shots, and seed;
 - Pauli observables for expectation or variational modes;
-- optimizer declaration for variational mode;
+- optimizer declaration and ordered parameter mapping for variational mode;
 - explicit hardware and human-approval flags;
 - provenance metadata without secrets.
 
@@ -102,7 +102,8 @@ This value is the mathematical reference target for the notebook, not a claim ab
 `FireOpalIBMProvider` implements the uploaded notebook flow:
 
 - `fo.execute` for sampled circuits;
-- `fo.iterate_expectation` for expectation and variational calls;
+- `fo.iterate_expectation` for expectation calls and each VQA objective evaluation;
+- SciPy `minimize` for the declared classical optimization loop, followed by `fo.stop_iterate`;
 - IBM credentials read from `IBM_QUANTUM_TOKEN` and `IBM_QUANTUM_INSTANCE`;
 - no API keys or tokens in requests, receipts, logs, or Git history.
 
@@ -126,7 +127,7 @@ A run is rejected when any of the following is true:
 3. non-finite parameters or coefficients;
 4. malformed Pauli strings;
 5. missing observables for expectation/VQA mode;
-6. missing optimizer for variational mode;
+6. missing optimizer or ordered parameter mapping for variational mode;
 7. hardware selection without explicit approval;
 8. credential-like keys in request or result payloads;
 9. provider adapter and declared provider mismatch;
