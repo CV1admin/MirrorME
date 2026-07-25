@@ -29,10 +29,19 @@ capabilities:
   - explicit epistemic-layer separation
   - hash-linked evolution proposal chain
   - deterministic evaluation metadata
-  - exact human approval gate
+  - exact human approval gate for mutations and change-packet export
+  - direct handling of read-only informational requests
+  - non-thinking operator output through Ollama
   - inspectable change-packet export
   - local bridge API
   - browser governance console
+
+output_routing:
+  read_only_requires_approval: false
+  mutation_requires_approval: true
+  expose_hidden_thinking: false
+  ollama_think: false
+  arithmetic_equality_validation: true
 
 prohibited:
   automatic_self_modification: true
@@ -43,12 +52,15 @@ prohibited:
   automatic_persistence: true
   external_actions: true
   mythology_as_empirical_evidence: true
+  hidden_chain_of_thought_exposure: true
+  approval_gate_on_read_only_queries: true
 
 local_runtime:
   provider: ollama
   base_model: qwen3:8b
   model_name: mkultra:0.4
   context_window: 32768
+  thinking_output: disabled
   bridge_host: 127.0.0.1
   bridge_port: 8765
   ui_port: 3000
@@ -62,6 +74,8 @@ release_gate:
     - Vite production build
     - Python unit tests
     - bridge service tests
+    - read-only routing regression test
+    - thinking-output suppression regression test
   remaining_requirements:
     - audited RFC 8785 canonicalization
     - real signature verification and trust roots
