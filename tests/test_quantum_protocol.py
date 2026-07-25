@@ -34,6 +34,7 @@ class QuantumIntegrationProtocolTest(unittest.TestCase):
             provider="local",
             backend_name="local-reference",
             shots=2048,
+            parameters={f"theta{index}": 0.0 for index in range(6)},
             observables=(
                 ObservableTerm("ZIX", 1.0),
                 ObservableTerm("ZXI", -0.5),
@@ -61,6 +62,11 @@ class QuantumIntegrationProtocolTest(unittest.TestCase):
             human_approved=False,
         )
         with self.assertRaisesRegex(QuantumProtocolError, "human approval"):
+            request.validate()
+
+    def test_variational_mode_requires_parameter_mapping(self) -> None:
+        request = replace(self.make_request(), parameters={})
+        with self.assertRaisesRegex(QuantumProtocolError, "parameter mapping"):
             request.validate()
 
     def test_secret_fields_are_rejected(self) -> None:
