@@ -22,6 +22,32 @@ mkultra:
     mythology_can_support_engineering_alone: false
     physical_claims_require_falsification_criterion: true
 
+  request_routing:
+    read_only_requires_approval: false
+    mutation_requires_approval: true
+    read_only_classes:
+      - definition
+      - classification
+      - comparison
+      - explanation
+      - calculation
+      - analysis
+      - status_inspection
+    mutation_classes:
+      - create
+      - modify
+      - delete
+      - export
+      - execute
+      - persist
+    action_required_banner_for_read_only: false
+
+  output_discipline:
+    expose_hidden_thinking: false
+    ollama_think: false
+    concise_reasoning_summary_allowed: true
+    arithmetic_equality_validation: true
+
   governed_evolution:
     enabled: true
     review_threshold: 0.75
@@ -43,6 +69,7 @@ mkultra:
     read_only_routes:
       - /api/v04/status
       - /api/v04/claims
+      - /api/chat
     governed_routes:
       - /api/v04/evolution/propose
       - /api/v04/evolution/evaluate
