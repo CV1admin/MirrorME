@@ -127,6 +127,16 @@ class QuantumRunRequest:
             if self.optimizer is None:
                 raise QuantumProtocolError("variational mode requires an optimizer specification.")
             self.optimizer.validate()
+            if not self.parameters:
+                raise QuantumProtocolError(
+                    "variational mode requires an ordered parameter mapping."
+                )
+            if self.optimizer.initial_parameters and (
+                len(self.optimizer.initial_parameters) != len(self.parameters)
+            ):
+                raise QuantumProtocolError(
+                    "initial parameter count must match the declared parameter mapping."
+                )
 
         hardware_provider = self.provider in {"ibm_quantum", "fire_opal_ibm"}
         if hardware_provider and not self.hardware_execution:
