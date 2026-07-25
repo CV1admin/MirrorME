@@ -30,6 +30,7 @@ def main() -> None:
         provider="fire_opal_ibm",
         backend_name="REPLACE_WITH_SUPPORTED_IBM_BACKEND",
         shots=2048,
+        parameters={f"theta{index}": 0.0 for index in range(6)},
         observables=(
             ObservableTerm("ZIX", 1.0),
             ObservableTerm("ZXI", -0.5),
