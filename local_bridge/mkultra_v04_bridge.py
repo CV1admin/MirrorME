@@ -42,6 +42,19 @@ DEFAULT_MODEL = "mkultra:0.4"
 class MKultraV04BridgeHandler(MirrorMeBridgeHandler):
     server_version = "MKultraLocalBridge/0.4"
 
+    def _proxy_ollama_chat(self, payload: dict[str, Any]) -> None:
+        """Proxy chat with Qwen/Ollama thinking output disabled.
+
+        The v0.4 UI is an operator-facing runtime, not a chain-of-thought
+        console. A copied payload prevents mutation of the caller-owned request,
+        while the forced value prevents clients from re-enabling exposed
+        reasoning through ``think: true``.
+        """
+
+        proxied_payload = dict(payload)
+        proxied_payload["think"] = False
+        super()._proxy_ollama_chat(proxied_payload)
+
     def do_GET(self) -> None:  # noqa: N802
         if not self._request_origin_allowed():
             self._send_json(403, {"ok": False, "error": "origin_not_allowed"})
@@ -143,6 +156,7 @@ def main() -> None:
     print(f"MKultra v0.4 bridge running at http://{args.host}:{args.port}")
     print(f"Proxy target: {args.ollama_url}/api/chat")
     print(f"Default model: {args.model}")
+    print("Thinking output: disabled")
     print("Governed evolution: proposal/export only; automatic execution disabled")
     server.serve_forever()
 
