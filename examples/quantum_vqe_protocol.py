@@ -44,7 +44,7 @@ def build_variational_circuit() -> tuple[str, tuple[str, ...]]:
     )
     circuit.barrier()
 
-    # The Hamiltonian is H = ZIX - 0.5 ZXI + 0.5 IXX.
+    # H = ZIX - 0.5 ZXI + 0.5 IXX.
     # Rotate the X-measured qubits into the computational basis.
     circuit.h(1)
     circuit.h(2)
@@ -71,7 +71,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--shots", type=int, default=2048)
     parser.add_argument("--max-iterations", type=int, default=30)
     parser.add_argument("--tolerance", type=float, default=0.01)
-    parser.add_argument("--rhobeg", type=float, default=0.5)
     parser.add_argument("--operator", default="VIREAX")
     parser.add_argument(
         "--session-id",
@@ -119,7 +118,6 @@ def main() -> int:
             max_iterations=args.max_iterations,
             tolerance=args.tolerance,
             initial_parameters=initial_parameters,
-            options={"rhobeg": args.rhobeg, "disp": True},
         ),
         hardware_execution=True,
         human_approved=True,
