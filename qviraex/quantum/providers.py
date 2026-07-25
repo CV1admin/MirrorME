@@ -76,15 +76,23 @@ class FireOpalIBMProvider:
             observables = PauliOperator.from_list(
                 [(term.pauli, term.coefficient) for term in request.observables]
             )
-            job = fo.iterate_expectation(
-                circuits=[request.circuit_qasm],
-                shot_count=request.shots,
-                credentials=credentials,
-                backend_name=request.backend_name,
-                parameters=[dict(request.parameters)],
-                observables=observables,
-            )
-            raw = job.result()
+            if request.mode == "expectation":
+                job = fo.iterate_expectation(
+                    circuits=[request.circuit_qasm],
+                    shot_count=request.shots,
+                    credentials=credentials,
+                    backend_name=request.backend_name,
+                    parameters=[dict(request.parameters)],
+                    observables=observables,
+                )
+                raw = job.result()
+            else:
+                job, raw = self._run_variational_loop(
+                    prepared=prepared,
+                    credentials=credentials,
+                    observables=observables,
+                    fireopal=fo,
+                )
 
         job_id = _read_job_id(job, raw)
         return ProviderResult(
@@ -99,6 +107,85 @@ class FireOpalIBMProvider:
                 "hardware_execution": True,
             },
         )
+
+    def _run_variational_loop(
+        self,
+        *,
+        prepared: PreparedQuantumRun,
+        credentials: Any,
+        observables: Any,
+        fireopal: Any,
+    ) -> tuple[Any, Mapping[str, Any]]:
+        request = prepared.request
+        optimizer = request.optimizer
+        if optimizer is None:
+            raise QuantumProtocolError("Missing optimizer after request validation.")
+
+        try:
+            from scipy.optimize import minimize
+        except ImportError as exc:
+            raise QuantumProtocolError(
+                "Variational Fire Opal runs require the optional 'scipy' package."
+            ) from exc
+
+        parameter_names = tuple(request.parameters)
+        initial_values = (
+            optimizer.initial_parameters
+            if optimizer.initial_parameters
+            else tuple(float(request.parameters[name]) for name in parameter_names)
+        )
+        history: list[float] = []
+        last_job: Any = None
+
+        def objective(values: Any) -> float:
+            nonlocal last_job
+            parameter_values = {
+                name: float(value) for name, value in zip(parameter_names, values)
+            }
+            last_job = fireopal.iterate_expectation(
+                circuits=[request.circuit_qasm],
+                shot_count=request.shots,
+                credentials=credentials,
+                backend_name=request.backend_name,
+                parameters=[parameter_values],
+                observables=observables,
+            )
+            result = last_job.result()
+            expectation = float(result["expectation_values"][0])
+            history.append(expectation)
+            return expectation
+
+        try:
+            optimization = minimize(
+                objective,
+                initial_values,
+                method=optimizer.name,
+                tol=optimizer.tolerance,
+                options={"maxiter": optimizer.max_iterations},
+            )
+        finally:
+            fireopal.stop_iterate(credentials, request.backend_name)
+
+        if last_job is None:
+            raise QuantumProtocolError("Variational optimizer completed without a provider job.")
+
+        raw = {
+            "expectation_values": history,
+            "final_expectation_value": float(optimization.fun),
+            "optimized_parameters": {
+                name: float(value)
+                for name, value in zip(parameter_names, optimization.x)
+            },
+            "optimizer": {
+                "name": optimizer.name,
+                "success": bool(optimization.success),
+                "status": int(optimization.status),
+                "message": str(optimization.message),
+                "iterations": int(getattr(optimization, "nit", len(history))),
+                "function_evaluations": int(getattr(optimization, "nfev", len(history))),
+            },
+        }
+        return last_job, raw
 
 
 def _read_job_id(job: Any, result: Any) -> str:
