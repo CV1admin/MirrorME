@@ -1,4 +1,4 @@
-# MirrorME — intelligence pipeline hard-rule stubs
+﻿# MirrorME â€” intelligence pipeline hard-rule stubs
 
 Client-side enforcers live in `lib/intelligencePipeline/`.
 
@@ -23,3 +23,8 @@ Endpoint (when wired): scientific jobs must pass enforcers before any private en
 
 These are **stubs**. They enforce fail-closed structure and hard rules; they do not
 implement production cryptography, identity, or real MKone science.
+
+## Usage guide
+
+See [USING_THE_INTELLIGENCE_PIPELINE.md](USING_THE_INTELLIGENCE_PIPELINE.md).
+
