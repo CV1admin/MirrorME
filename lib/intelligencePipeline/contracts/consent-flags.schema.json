@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civilisation.one/schemas/consent-flags.schema.json",
+  "title": "MirrorME / Router Consent Flags (Hard Rule #2)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "allow_router"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "allow_router": { "type": "boolean" },
+    "allow_private_mkone": { "type": "boolean", "default": false },
+    "allow_validation_report": { "type": "boolean", "default": false },
+    "allow_mk_human_review": { "type": "boolean", "default": false },
+    "allow_publication": { "type": "boolean", "default": false },
+    "recorded_at_utc": { "type": "string", "format": "date-time" },
+    "consent_text_version": { "type": "string" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "allow_publication": { "const": true } }
+      },
+      "then": {
+        "properties": {
+          "allow_private_mkone": { "const": true },
+          "allow_validation_report": { "const": true },
+          "allow_mk_human_review": { "const": true },
+          "allow_router": { "const": true }
+        }
+      }
+    }
+  ]
+}

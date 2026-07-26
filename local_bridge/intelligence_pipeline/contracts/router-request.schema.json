@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civilisation.one/schemas/router-request.schema.json",
+  "title": "Global Intelligence Router Authenticated Request",
+  "description": "Hard rule #1: requests without valid auth context must be rejected before gates or MKone.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "session_id",
+    "member_public_id",
+    "request_class",
+    "issued_at_utc",
+    "client_proof"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "member_public_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "node_id": {
+      "type": "string"
+    },
+    "request_class": {
+      "type": "string",
+      "enum": [
+        "chat",
+        "research_assist",
+        "scientific_job",
+        "publication_candidate",
+        "admin_ops"
+      ]
+    },
+    "issued_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nonce": {
+      "type": "string",
+      "minLength": 8
+    },
+    "consent_flags": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "description": "Evaluated under hard rule #2; must still be present for scientific classes"
+    },
+    "payload_ref": {
+      "type": "string",
+      "description": "Preferred: reference/handle to encrypted or external payload"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Inline payload only when small and consented; prefer payload_ref"
+    },
+    "client_proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "bearer_session_token",
+            "wallet_signature",
+            "did_signature",
+            "device_key_signature"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Proof material for verification only; not logged in full"
+        },
+        "public_key_id": {
+          "type": "string"
+        }
+      }
+    },
+    "required_scopes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Scopes the client believes it needs; server enforces actual mapping"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "request_class": {
+            "enum": ["scientific_job", "publication_candidate"]
+          }
+        }
+      },
+      "then": {
+        "required": ["consent_flags"]
+      }
+    }
+  ]
+}

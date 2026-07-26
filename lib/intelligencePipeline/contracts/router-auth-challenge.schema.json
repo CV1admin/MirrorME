@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civilisation.one/schemas/router-auth-challenge.schema.json",
+  "title": "Global Intelligence Router Auth Challenge",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "challenge_id",
+    "nonce",
+    "audience",
+    "created_at_utc",
+    "expires_at_utc"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "challenge_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "nonce": {
+      "type": "string",
+      "minLength": 16
+    },
+    "audience": {
+      "type": "string",
+      "const": "civilisation.one.global-intelligence-router"
+    },
+    "created_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "member_public_id_hint": {
+      "type": "string",
+      "description": "Optional non-secret hint only; not proof of identity"
+    },
+    "node_id_hint": {
+      "type": "string"
+    },
+    "allowed_authenticators": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "session_token",
+          "wallet_signature",
+          "did_signature",
+          "device_key"
+        ]
+      }
+    }
+  }
+}

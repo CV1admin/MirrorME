@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civilisation.one/schemas/publication-package.schema.json",
+  "title": "Optional Publication Package (Hard Rule #5)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "publication_id",
+    "publication_request_id",
+    "request_id",
+    "validation_report_id",
+    "decision_id",
+    "title",
+    "abstract",
+    "claims",
+    "published_at_utc",
+    "publisher"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "publication_id": { "type": "string", "minLength": 8 },
+    "publication_request_id": { "type": "string", "minLength": 8 },
+    "request_id": { "type": "string", "minLength": 8 },
+    "validation_report_id": { "type": "string", "minLength": 8 },
+    "decision_id": { "type": "string", "minLength": 8 },
+    "title": { "type": "string", "minLength": 1 },
+    "abstract": { "type": "string", "minLength": 1 },
+    "body": { "type": "string" },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim_id", "text", "classification"],
+        "properties": {
+          "claim_id": { "type": "string" },
+          "text": { "type": "string" },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "internal_framework",
+              "externally_established",
+              "hypothesis",
+              "engineering_observation"
+            ]
+          }
+        }
+      }
+    },
+    "public_provenance_summary": { "type": "string" },
+    "gate_trail_public_ref": { "type": "string" },
+    "published_at_utc": { "type": "string", "format": "date-time" },
+    "publisher": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["public_id"],
+      "properties": {
+        "public_id": { "type": "string" },
+        "name": { "type": "string" },
+        "github_login": { "type": "string" }
+      }
+    },
+    "channel": {
+      "type": "string",
+      "enum": ["research_site", "platform", "internal_announcement", "other"]
+    },
+    "disclaimer": {
+      "type": "string",
+      "default": "Published under Civilisation.One optional publication rules after Marek Kowalski approval. Validation reports alone are not publications."
+    }
+  }
+}
