@@ -14,6 +14,10 @@ Handshake route:
     POST /api/handshake/verify
     GET  /api/handshake/status?session_id=...
 
+Intelligence pipeline stub (hard rules #1–#5):
+    POST /api/intelligence/route
+    Body: { request, session, mk_decision?, publication_request? }
+
 The handshake is local session confirmation. It is not cryptographic proof of legal
 identity and must not be represented as consciousness, biometric verification, or
 external account authentication.
@@ -31,7 +35,17 @@ import urllib.parse
 import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
+
+_BRIDGE_DIR = Path(__file__).resolve().parent
+if str(_BRIDGE_DIR) not in sys.path:
+    sys.path.insert(0, str(_BRIDGE_DIR))
+
+try:
+    from intelligence_pipeline.api import handle_scientific_route
+except ImportError:  # pragma: no cover - package always shipped with bridge
+    handle_scientific_route = None  # type: ignore[assignment,misc]
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
@@ -132,6 +146,8 @@ class MirrorMeBridgeHandler(BaseHTTPRequestHandler):
                     "ollama_url": self.server.ollama_url,  # type: ignore[attr-defined]
                     "operator": self.server.operator,  # type: ignore[attr-defined]
                     "handshake_protocol": HANDSHAKE_PROTOCOL_VERSION,
+                    "intelligence_pipeline_stub": handle_scientific_route is not None,
+                    "intelligence_route": "/api/intelligence/route",
                 },
             )
             return
@@ -164,6 +180,26 @@ class MirrorMeBridgeHandler(BaseHTTPRequestHandler):
             if path == "/api/handshake/verify":
                 payload = _read_json(self)
                 self._handle_handshake_verify(payload)
+                return
+
+            if path == "/api/intelligence/route":
+                if handle_scientific_route is None:
+                    self._send_json(
+                        503,
+                        {
+                            "ok": False,
+                            "error": "intelligence_pipeline_unavailable",
+                            "hint": "local_bridge/intelligence_pipeline package missing",
+                        },
+                    )
+                    return
+                payload = _read_json(self)
+                result = handle_scientific_route(payload)
+                status = 200 if result.get("ok") else 403
+                # awaiting_mk_review is an expected success stop
+                if result.get("stage") == "awaiting_mk_review":
+                    status = 200
+                self._send_json(status, result)
                 return
 
             self._send_json(404, {"ok": False, "error": "not_found"})

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civilisation.one/schemas/gate-trail.schema.json",
+  "title": "Global Intelligence Router Gate Trail (Hard Rule #2)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "gate_trail_id",
+    "request_id",
+    "session_id",
+    "created_at_utc",
+    "auth_event_ref",
+    "gates",
+    "overall"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "gate_trail_id": { "type": "string", "minLength": 8 },
+    "request_id": { "type": "string", "minLength": 8 },
+    "session_id": { "type": "string", "minLength": 8 },
+    "created_at_utc": { "type": "string", "format": "date-time" },
+    "auth_event_ref": {
+      "type": "string",
+      "description": "Reference to hard rule #1 auth accept event"
+    },
+    "policy_version": { "type": "string" },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "consent", "provenance", "audit"],
+      "properties": {
+        "policy": { "$ref": "#/$defs/gateResult" },
+        "consent": { "$ref": "#/$defs/gateResult" },
+        "provenance": { "$ref": "#/$defs/gateResult" },
+        "audit": { "$ref": "#/$defs/gateResult" }
+      }
+    },
+    "consent_snapshot_hash": { "type": "string" },
+    "provenance_set_hash": { "type": "string" },
+    "overall": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    }
+  },
+  "$defs": {
+    "gateResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome"],
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": ["pass", "fail"]
+        },
+        "reason_code": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "policy_denied",
+            "consent_missing",
+            "consent_insufficient",
+            "provenance_incomplete",
+            "provenance_mismatch",
+            "audit_unavailable",
+            "other"
+          ]
+        },
+        "detail": { "type": "string" }
+      }
+    }
+  }
+}

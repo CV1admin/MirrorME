@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civilisation.one/schemas/manual-review-decision.schema.json",
+  "title": "Marek Kowalski Manual Review Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision_id",
+    "request_id",
+    "validation_report_id",
+    "reviewer",
+    "outcome",
+    "checklist",
+    "decided_at_utc"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "decision_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "validation_report_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "role"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "Marek Kowalski"
+        },
+        "github_login": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "const": "scientific_publication_authority"
+        }
+      }
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "approved_for_internal_use",
+        "approved_for_publication",
+        "changes_requested",
+        "rejected"
+      ]
+    },
+    "checklist": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity_and_integrity",
+        "scientific_honesty",
+        "safety_and_policy"
+      ],
+      "properties": {
+        "identity_and_integrity": { "type": "boolean" },
+        "scientific_honesty": { "type": "boolean" },
+        "safety_and_policy": { "type": "boolean" },
+        "publication_readiness": {
+          "type": "boolean",
+          "description": "Required true when outcome is approved_for_publication"
+        }
+      }
+    },
+    "notes": {
+      "type": "string"
+    },
+    "supersedes_decision_id": {
+      "type": ["string", "null"]
+    },
+    "decided_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "outcome": { "const": "approved_for_publication" }
+        }
+      },
+      "then": {
+        "properties": {
+          "checklist": {
+            "properties": {
+              "publication_readiness": { "const": true }
+            },
+            "required": ["publication_readiness"]
+          }
+        }
+      }
+    }
+  ]
+}

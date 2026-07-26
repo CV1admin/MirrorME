@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civilisation.one/schemas/publication-request.schema.json",
+  "title": "Optional Publication Request (Hard Rule #5)",
+  "description": "Explicit publish intent. approved_for_publication alone is not enough.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "publication_request_id",
+    "request_id",
+    "validation_report_id",
+    "decision_id",
+    "confirm_publish",
+    "requested_by",
+    "requested_at_utc"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "publication_request_id": { "type": "string", "minLength": 8 },
+    "request_id": { "type": "string", "minLength": 8 },
+    "validation_report_id": { "type": "string", "minLength": 8 },
+    "decision_id": {
+      "type": "string",
+      "minLength": 8,
+      "description": "Must reference a decision with outcome approved_for_publication"
+    },
+    "confirm_publish": {
+      "type": "boolean",
+      "description": "Must be true to proceed; false is a no-op"
+    },
+    "requested_by": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_type", "public_id"],
+      "properties": {
+        "actor_type": {
+          "type": "string",
+          "enum": ["member", "scientific_publication_authority", "delegated_publisher"]
+        },
+        "public_id": { "type": "string" },
+        "github_login": { "type": "string" }
+      }
+    },
+    "requested_at_utc": { "type": "string", "format": "date-time" },
+    "channel": {
+      "type": "string",
+      "enum": ["research_site", "platform", "internal_announcement", "other"],
+      "default": "research_site"
+    },
+    "notes": { "type": "string" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "confirm_publish": { "const": true } }
+      },
+      "then": {
+        "properties": {
+          "confirm_publish": { "const": true }
+        }
+      }
+    }
+  ]
+}

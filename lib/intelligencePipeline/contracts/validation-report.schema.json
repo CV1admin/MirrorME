@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civilisation.one/schemas/validation-report.schema.json",
+  "title": "Civilisation.One Validation Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "validation_report_id",
+    "request_id",
+    "created_at_utc",
+    "engine",
+    "methods_summary",
+    "results_summary",
+    "claims",
+    "gate_trail_ref",
+    "recommended_review_actions"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "validation_report_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "created_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "build": { "type": "string" }
+      }
+    },
+    "methods_summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "results_summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "uncertainty_summary": {
+      "type": "string"
+    },
+    "input_provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source_class", "content_hash"],
+        "properties": {
+          "source_class": {
+            "type": "string",
+            "enum": [
+              "user_selected_context",
+              "public_dataset",
+              "internal_framework",
+              "instrument_output",
+              "prior_report",
+              "other"
+            ]
+          },
+          "content_hash": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim_id", "text", "classification"],
+        "properties": {
+          "claim_id": { "type": "string" },
+          "text": { "type": "string" },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "internal_framework",
+              "externally_established",
+              "hypothesis",
+              "engineering_observation"
+            ]
+          }
+        }
+      }
+    },
+    "gate_trail_ref": {
+      "type": "string",
+      "description": "Reference or hash of policy/consent/provenance/audit gate outcomes"
+    },
+    "recommended_review_actions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "publication_candidate": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civilisation.one/schemas/router-auth-failure.schema.json",
+  "title": "Global Intelligence Router Auth Failure Audit Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "occurred_at_utc",
+    "outcome",
+    "authenticator_attempted"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "occurred_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "member_public_id": {
+      "type": "string"
+    },
+    "node_id": {
+      "type": "string"
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "auth_missing",
+        "auth_invalid",
+        "auth_proof_failed",
+        "auth_replay",
+        "authz_insufficient_scope"
+      ]
+    },
+    "authenticator_attempted": {
+      "type": "string",
+      "enum": [
+        "none",
+        "session_token",
+        "wallet_signature",
+        "did_signature",
+        "device_key",
+        "unknown"
+      ]
+    },
+    "proof_fingerprint": {
+      "type": "string",
+      "description": "Hash only; never raw token or signature bytes in long-term logs if policy forbids"
+    },
+    "detail": {
+      "type": "string",
+      "description": "Non-sensitive diagnostic code or short reason"
+    }
+  }
+}
