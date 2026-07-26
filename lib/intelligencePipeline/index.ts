@@ -8,6 +8,7 @@ export { enforceValidationReportNotPublication, assertNotPublished } from './enf
 export { enforceMkReviewRequired } from './enforceMkReview';
 export { enforceOptionalPublication } from './enforcePublication';
 export { runScientificPipeline, type PipelineResult } from './pipeline';
+export { adaptLocalPayload, isFriendlyPayload, type FriendlyRequest, type FriendlySession } from './localAdapter';
 export {
   PipelineEnforceError,
   ROUTER_AUDIENCE,
