@@ -128,7 +128,7 @@ Build the canonical MirrorME persona on Qwen 3:
 
 ```bash
 ollama pull qwen3:8b
-ollama create mirrorme -f ollama/Modelfile
+ollama create mirrorme:latest -f ollama/Modelfile
 ```
 
 The Modelfile embeds the MirrorME manifesto as canonical persona identity. Its epistemic discipline still distinguishes internal framework axioms from externally established empirical claims.
@@ -136,7 +136,7 @@ The Modelfile embeds the MirrorME manifesto as canonical persona identity. Its e
 Start the MirrorME local bridge directly:
 
 ```bash
-python local_bridge/mirrorme_bridge.py --model mirrorme
+python local_bridge/mirrorme_bridge.py --model mirrorme:latest
 ```
 
 Or use the startup scripts:
@@ -147,6 +147,15 @@ Or use the startup scripts:
 
 ```bash
 sh scripts/start-mirrorme.sh
+```
+
+Windows troubleshooting for missing GitHub CLI or publishing setup:
+
+```powershell
+winget install --id GitHub.cli -e
+where.exe gh
+gh --version
+gh auth login
 ```
 
 Check bridge health:
@@ -172,7 +181,7 @@ The chat service now defaults to the local bridge:
 ```text
 provider: ollama
 endpoint: http://localhost:8765
-model: mirrorme
+model: mirrorme:latest
 ```
 
 Full guide:

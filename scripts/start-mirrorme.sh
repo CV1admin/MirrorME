@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-MODEL="${MIRRORME_MODEL:-mirrorme}"
+MODEL="${MIRRORME_MODEL:-mirrorme:latest}"
 BRIDGE_PORT="${MIRRORME_BRIDGE_PORT:-8765}"
 
 command -v ollama >/dev/null 2>&1 || { echo "Ollama is not installed."; exit 1; }

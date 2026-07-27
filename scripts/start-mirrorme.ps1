@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$Model = $(if ($env:MIRRORME_MODEL) { $env:MIRRORME_MODEL } else { "mkultra:0.3" }),
+  [string]$Model = $(if ($env:MIRRORME_MODEL) { $env:MIRRORME_MODEL } else { "mirrorme:latest" }),
   [int]$BridgePort = $(if ($env:MIRRORME_BRIDGE_PORT) { [int]$env:MIRRORME_BRIDGE_PORT } else { 8765 })
 )
 
@@ -10,6 +10,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepositoryRoot = Split-Path -Parent $ScriptDirectory
 $BridgePath = Join-Path $RepositoryRoot "local_bridge/mirrorme_bridge.py"
+$CanonicalModelfile = Join-Path $RepositoryRoot "ollama\Modelfile"
 $MKultraModelfile = Join-Path $RepositoryRoot "ollama/Modelfile.mkultra-v0.3"
 
 function Test-CommandAvailable {
@@ -44,7 +45,14 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ($models -notmatch [regex]::Escape($Model)) {
-  if ($Model -eq "mkultra:0.3" -and (Test-Path $MKultraModelfile)) {
+  if ($Model -eq "mirrorme:latest" -and (Test-Path $CanonicalModelfile)) {
+    Write-Host "[MODEL] Building mirrorme:latest from the repository Modelfile"
+    & ollama pull qwen3:8b
+    if ($LASTEXITCODE -ne 0) { throw "Failed to pull qwen3:8b." }
+    & ollama create $Model -f $CanonicalModelfile
+    if ($LASTEXITCODE -ne 0) { throw "Failed to create ${Model}." }
+  }
+  elseif ($Model -eq "mkultra:0.3" -and (Test-Path $MKultraModelfile)) {
     Write-Host "[MODEL] Building mkultra:0.3 from the repository Modelfile"
     & ollama pull qwen3:8b
     if ($LASTEXITCODE -ne 0) { throw "Failed to pull qwen3:8b." }

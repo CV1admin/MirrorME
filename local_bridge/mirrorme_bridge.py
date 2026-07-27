@@ -50,7 +50,7 @@ except ImportError:  # pragma: no cover - package always shipped with bridge
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
-DEFAULT_MODEL = "llama3.1:8b"
+DEFAULT_MODEL = "mirrorme:latest"
 DEFAULT_OPERATOR = "Marek K"
 HANDSHAKE_TTL_SECONDS = 300
 HANDSHAKE_CONFIRMATION_PHRASE = "CONFIRM_LOCAL_MIRRORME"
