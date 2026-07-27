@@ -30,15 +30,19 @@ const DEFAULT_CONFIG: ModelConfig = {
   provider: 'ollama',
   geminiApiKey: '',
   ollamaEndpoint: 'http://localhost:8765',
-  ollamaModel: 'mirrorme',
+  ollamaModel: 'mirrorme:latest',
 };
 
 const normalizeStoredConfig = (parsed: Partial<ModelConfig>): ModelConfig => {
+  const legacyModel =
+    !parsed.ollamaModel ||
+    parsed.ollamaModel === 'llama3.1:8b' ||
+    parsed.ollamaModel === 'mirrorme';
   const legacyDefault =
     parsed.provider === 'gemini' &&
     !parsed.geminiApiKey &&
     (!parsed.ollamaEndpoint || parsed.ollamaEndpoint === 'http://localhost:11434') &&
-    (!parsed.ollamaModel || parsed.ollamaModel === 'llama3.1:8b');
+    legacyModel;
 
   if (legacyDefault) return DEFAULT_CONFIG;
 
@@ -47,7 +51,7 @@ const normalizeStoredConfig = (parsed: Partial<ModelConfig>): ModelConfig => {
   if (
     merged.provider === 'ollama' &&
     merged.ollamaEndpoint === 'http://localhost:11434' &&
-    merged.ollamaModel === 'llama3.1:8b'
+    (merged.ollamaModel === 'llama3.1:8b' || merged.ollamaModel === 'mirrorme' || merged.ollamaModel === 'mirrorme:latest')
   ) {
     return DEFAULT_CONFIG;
   }
@@ -198,7 +202,7 @@ const Settings: React.FC = () => {
                     type="text"
                     value={config.ollamaModel}
                     onChange={(e) => setConfig(prev => ({ ...prev, ollamaModel: e.target.value }))}
-                    placeholder="mirrorme"
+                    placeholder="mirrorme:latest"
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500"
                   />
                 </div>
