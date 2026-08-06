@@ -12,22 +12,28 @@ const ALLOWED = new Set([
   'engineering_observation',
 ]);
 
+const REQUIRED_REPORT_FIELDS = [
+  'validation_report_id',
+  'request_id',
+  'engine',
+  'methods_summary',
+  'results_summary',
+  'claims',
+  'gate_trail_ref',
+] as const satisfies ReadonlyArray<keyof ValidationReport>;
+
+function hasRequiredValue(value: unknown): boolean {
+  return value !== undefined && value !== null && value !== '';
+}
+
 export function enforceValidationReportNotPublication(
   report: ValidationReport | null | undefined,
 ): ValidationReport {
   if (!report) {
     throw new PipelineEnforceError('report_missing', 'validation report missing', 3);
   }
-  for (const key of [
-    'validation_report_id',
-    'request_id',
-    'engine',
-    'methods_summary',
-    'results_summary',
-    'claims',
-    'gate_trail_ref',
-  ] as const) {
-    if (!(report as Record<string, unknown>)[key]) {
+  for (const key of REQUIRED_REPORT_FIELDS) {
+    if (!hasRequiredValue(report[key])) {
       throw new PipelineEnforceError('report_incomplete', `report missing ${key}`, 3, { field: key });
     }
   }
