@@ -10,7 +10,14 @@ from .protocol import (
     QuantumIntegrationProtocol,
     QuantumProtocolError,
     QuantumRunRequest,
+    UncertaintyReport,
+    bootstrap_mean_interval,
+    coefficient_weighted_hoeffding,
     expectation_from_probabilities,
+    group_commuting_observables,
+    normalize_observables,
+    pauli_words_commute,
+    wilson_interval,
 )
 
 __all__ = [
@@ -23,5 +30,12 @@ __all__ = [
     "QuantumIntegrationProtocol",
     "QuantumProtocolError",
     "QuantumRunRequest",
+    "UncertaintyReport",
+    "bootstrap_mean_interval",
+    "coefficient_weighted_hoeffding",
     "expectation_from_probabilities",
+    "group_commuting_observables",
+    "normalize_observables",
+    "pauli_words_commute",
+    "wilson_interval",
 ]

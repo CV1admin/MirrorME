@@ -106,7 +106,7 @@ function failTrail(
   authEventRef: string,
   gates: Record<string, ReturnType<typeof gate>>,
   failed: string,
-  flags: Record<string, unknown> = {},
+  flags: unknown = {},
   provenance: unknown[] = [],
 ): PipelineEnforceError {
   for (const name of ['policy', 'consent', 'provenance', 'audit']) {
