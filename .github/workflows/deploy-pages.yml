@@ -53,7 +53,7 @@ jobs:
     needs: build
 
     steps:
-      - name: Ensure workflow-based GitHub Pages is enabled
+      - name: Verify GitHub Pages is enabled
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -72,36 +72,18 @@ jobs:
           })"
 
           if [[ "${status}" == "200" ]]; then
-            echo 'GitHub Pages is already enabled.'
+            echo 'GitHub Pages is enabled.'
             exit 0
           fi
 
-          if [[ "${status}" != "404" ]]; then
-            cat pages-response.json
-            echo "Unexpected Pages status: ${status}" >&2
+          if [[ "${status}" == "404" ]]; then
+            echo '::error title=GitHub Pages is disabled::Open repository Settings → Pages, set Source to GitHub Actions, then re-run this workflow.'
             exit 1
           fi
 
-          create_status="$({
-            curl --silent --show-error \
-              --request POST \
-              --output pages-create-response.json \
-              --write-out '%{http_code}' \
-              --header 'Accept: application/vnd.github+json' \
-              --header "Authorization: Bearer ${GH_TOKEN}" \
-              --header 'X-GitHub-Api-Version: 2022-11-28' \
-              --header 'Content-Type: application/json' \
-              --data '{"build_type":"workflow"}' \
-              "${pages_url}"
-          })"
-
-          if [[ "${create_status}" != "201" && "${create_status}" != "204" && "${create_status}" != "409" ]]; then
-            cat pages-create-response.json
-            echo "Unable to enable GitHub Pages: HTTP ${create_status}" >&2
-            exit 1
-          fi
-
-          echo 'Workflow-based GitHub Pages is enabled.'
+          cat pages-response.json
+          echo "::error title=Pages preflight failed::Unexpected GitHub Pages API status ${status}."
+          exit 1
 
       - name: Deploy to GitHub Pages
         id: deployment
