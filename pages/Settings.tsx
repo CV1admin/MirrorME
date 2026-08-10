@@ -29,34 +29,8 @@ interface HandshakeStatus {
 const DEFAULT_CONFIG: ModelConfig = {
   provider: 'ollama',
   geminiApiKey: '',
-  ollamaEndpoint: 'http://localhost:8765',
-  ollamaModel: 'mirrorme:latest',
-};
-
-const normalizeStoredConfig = (parsed: Partial<ModelConfig>): ModelConfig => {
-  const legacyModel =
-    !parsed.ollamaModel ||
-    parsed.ollamaModel === 'llama3.1:8b' ||
-    parsed.ollamaModel === 'mirrorme';
-  const legacyDefault =
-    parsed.provider === 'gemini' &&
-    !parsed.geminiApiKey &&
-    (!parsed.ollamaEndpoint || parsed.ollamaEndpoint === 'http://localhost:11434') &&
-    legacyModel;
-
-  if (legacyDefault) return DEFAULT_CONFIG;
-
-  const merged: ModelConfig = { ...DEFAULT_CONFIG, ...parsed };
-
-  if (
-    merged.provider === 'ollama' &&
-    merged.ollamaEndpoint === 'http://localhost:11434' &&
-    (merged.ollamaModel === 'llama3.1:8b' || merged.ollamaModel === 'mirrorme' || merged.ollamaModel === 'mirrorme:latest')
-  ) {
-    return DEFAULT_CONFIG;
-  }
-
-  return merged;
+  ollamaEndpoint: 'http://localhost:11434',
+  ollamaModel: 'llama3.1:8b',
 };
 
 const Settings: React.FC = () => {
@@ -91,62 +65,6 @@ const Settings: React.FC = () => {
   const saveConfig = () => {
     window.localStorage.setItem(MODEL_CONFIG_KEY, JSON.stringify(config));
     setSavedAt(new Date().toLocaleTimeString());
-  };
-
-  const useLocalDefaults = () => {
-    setConfig(DEFAULT_CONFIG);
-    window.localStorage.setItem(MODEL_CONFIG_KEY, JSON.stringify(DEFAULT_CONFIG));
-    setSavedAt(new Date().toLocaleTimeString());
-  };
-
-  const bridgeBase = config.ollamaEndpoint.replace(/\/$/, '');
-
-  const startHandshake = async () => {
-    setHandshake({ state: 'CHALLENGE_ISSUED', message: 'Requesting a fresh local challenge…' });
-    try {
-      const response = await fetch(`${bridgeBase}/api/handshake/challenge`);
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || 'challenge_failed');
-      setChallenge(payload as HandshakeChallenge);
-      setHandshake({
-        state: 'CHALLENGE_ISSUED',
-        message: 'Challenge received. Confirm this local runtime session.',
-      });
-    } catch (error) {
-      setHandshake({ state: 'ERROR', message: error instanceof Error ? error.message : String(error) });
-    }
-  };
-
-  const verifyHandshake = async () => {
-    if (!challenge) return;
-    try {
-      const response = await fetch(`${bridgeBase}/api/handshake/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: challenge.session_id,
-          nonce: challenge.nonce,
-          operator: 'Marek K',
-          confirmation_phrase: 'CONFIRM_LOCAL_MIRRORME',
-          client_capabilities: { ui: 'MirrorME', memory_policy_gate: true },
-        }),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || 'verification_failed');
-      window.localStorage.setItem(HANDSHAKE_SESSION_KEY, payload.session_id);
-      setChallenge(null);
-      setHandshake({
-        state: 'VERIFIED_LOCAL_SESSION',
-        message: 'Local runtime session confirmed. This is not legal or cryptographic identity proof.',
-      });
-    } catch (error) {
-      setHandshake({ state: 'ERROR', message: error instanceof Error ? error.message : String(error) });
-    }
-  };
-
-  const updateMemoryApproval = (approved: boolean) => {
-    setMemoryApproved(approved);
-    window.localStorage.setItem(MEMORY_APPROVAL_KEY, String(approved));
   };
 
   return (
@@ -202,7 +120,7 @@ const Settings: React.FC = () => {
                     type="text"
                     value={config.ollamaModel}
                     onChange={(e) => setConfig(prev => ({ ...prev, ollamaModel: e.target.value }))}
-                    placeholder="mirrorme:latest"
+                    placeholder="llama3.1:8b"
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500"
                   />
                 </div>
