@@ -45,22 +45,7 @@ const Settings: React.FC = () => {
     () => window.localStorage.getItem(MEMORY_APPROVAL_KEY) === 'true'
   );
 
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(MODEL_CONFIG_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<ModelConfig>;
-      const normalized = normalizeStoredConfig(parsed);
-      setConfig(normalized);
-
-      if (JSON.stringify(normalized) !== JSON.stringify(parsed)) {
-        window.localStorage.setItem(MODEL_CONFIG_KEY, JSON.stringify(normalized));
-      }
-    } catch {
-      window.localStorage.removeItem(MODEL_CONFIG_KEY);
-      setConfig(DEFAULT_CONFIG);
-    }
-  }, []);
+  useEffect(, []);
 
   const saveConfig = () => {
     window.localStorage.setItem(MODEL_CONFIG_KEY, JSON.stringify(config));
@@ -253,3 +238,7 @@ const Settings: React.FC = () => {
 };
 
 export default Settings;
+function normalizeStoredConfig(parsed: Partial<ModelConfig>) {
+  throw new Error('Function not implemented.');
+}
+
