@@ -478,7 +478,7 @@ MirrorME client
   -> policy, consent, provenance and audit gates
   -> private MKone scientific engine
   -> validation report
-  -> Marek Kowalski manual review
+  -> Admin manual review
   -> optional publication
 ```
 
